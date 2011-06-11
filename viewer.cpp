@@ -1,6 +1,6 @@
 // viewer.cpp - part of TweakPNG
 /*
-    Copyright (C) 1999-2008 Jason Summers
+    Copyright (C) 1999-2011 Jason Summers
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@
 #include "tweakpng.h"
 
 #include "pngtodib.h"
-#include <png.h>
 #include <strsafe.h>
 
 #include "resource.h"
@@ -37,17 +36,8 @@ extern struct globals_struct globals;
 
 void twpng_get_libpng_version(TCHAR *buf, int buflen)
 {
-#ifdef UNICODE
-	StringCchPrintf(buf,buflen,_T("%S"),png_get_libpng_ver(NULL));
-#else
-	StringCchPrintf(buf,buflen,"%s",png_get_libpng_ver(NULL));
-#endif
+	pngdib_get_libpng_version(buf,buflen);
 }
-
-//void twpng_get_pngdib_version(TCHAR *buf, int buflen)
-//{
-//	StringCchCopy(buf,buflen,pngdib_get_version_string());
-//}
 
 void Viewer::GlobalInit()
 {
@@ -182,25 +172,6 @@ void Viewer::CalcStretchedSize()
 
 }
 
-static void my_pngptrhook(void *userdata, void *pngptr1)
-{
-	png_structp png_ptr = (png_structp)pngptr1;
-
-	png_set_user_limits(png_ptr,100000,100000); // max image dimensions
-
-#if PNG_LIBPNG_VER >= 10400
-	// Number of ancillary chunks stored.
-	// I don't think we need any of these, but there appears to be no
-	// way to set the limit to 0. (0 is reserved to mean "unlimited".)
-	// I'll just set it to an arbitrary low number.
-	png_set_chunk_cache_max(png_ptr,10);
-#endif
-
-#if PNG_LIBPNG_VER >= 10401
-	png_set_chunk_malloc_max(png_ptr,1000000);
-#endif
-}
-
 struct viewer_read_ctx {
 	Png *png;
 };
@@ -244,9 +215,7 @@ void Viewer::Update(Png *png1)
 	hcur=SetCursor(LoadCursor(NULL,IDC_WAIT));
 	cursor_flag=1;
 
-	p2d = _pngdib_init();
-
-	pngdib_setcallback_pngptrhook(p2d,my_pngptrhook);
+	p2d = pngdib_init();
 
 	png1->stream_file_start();
 	pngdib_p2d_set_png_read_fn(p2d,my_read_fn);

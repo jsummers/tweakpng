@@ -42,10 +42,6 @@ struct PNGD_COLOR_struct {
 struct p2d_struct {
 	void *userdata;
 	TCHAR *errmsg;
-	pngdib_malloc_cb_type   malloc_function;
-	pngdib_free_cb_type     free_function;
-	pngdib_realloc_cb_type  realloc_function;
-	pngdib_pngptrhook_cb_type pngptrhook_function;
 
 	pngdib_read_cb_type read_cb;
 
@@ -84,14 +80,10 @@ static void pngd_get_error_message(int rv,TCHAR *e, int e_len)
 {
 	switch(rv) {
 	case PNGD_E_ERROR:   StringCchCopy(e,e_len,_T("Unknown error")); break;
-	case PNGD_E_VERSION: StringCchCopy(e,e_len,_T("Incompatible library version")); break;
 	case PNGD_E_NOMEM:   StringCchCopy(e,e_len,_T("Unable to allocate memory")); break;
-	case PNGD_E_UNSUPP:  StringCchCopy(e,e_len,_T("Invalid or unsupported image")); break;
 	case PNGD_E_LIBPNG:  StringCchCopy(e,e_len,_T("libpng reported an error")); break;
-	case PNGD_E_BADBMP:  StringCchCopy(e,e_len,_T("Invalid BMP image")); break;
 	case PNGD_E_BADPNG:  StringCchCopy(e,e_len,_T("Invalid PNG image")); break;
 	case PNGD_E_READ:    StringCchCopy(e,e_len,_T("Unable to read file")); break;
-	case PNGD_E_WRITE:   StringCchCopy(e,e_len,_T("Unable to write file")); break;
 	}
 }
 
@@ -112,12 +104,10 @@ static void my_png_error_fn(png_structp png_ptr, const char *err_msg)
 	longjmp(*j, -1);
 }
 
-
 static void my_png_warning_fn(png_structp png_ptr, const char *warn_msg)
 {
 	return;
 }
-
 
 // A callback function used with custom I/O.
 static void my_png_read_fn_custom(png_structp png_ptr,
@@ -161,7 +151,6 @@ static void gamma_correct(double screen_gamma,double file_gamma,
 	(*blue)  = (unsigned char)(pow((double)(*blue )/255.0,g)*255.0+0.5);
 }
 
-
 int pngdib_p2d_run(PNGDIB *p2d)
 {
 	png_structp png_ptr;
@@ -194,9 +183,6 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	struct PNGD_COLOR_struct bkgd_color;
 	int is_grayscale,has_alpha_channel;
 	double file_gamma;
-	int write_bitfields;
-
-	write_bitfields=0;
 
 	manual_trns=0;
 	has_trns=has_bkgd=0;
@@ -229,9 +215,19 @@ int pngdib_p2d_run(PNGDIB *p2d)
 		my_png_error_fn, my_png_warning_fn);
 	if(!png_ptr) { rv=PNGD_E_NOMEM; goto abort; }
 
-	if(p2d->pngptrhook_function) {
-		(*(p2d->pngptrhook_function))(p2d->userdata,(void*)png_ptr);
-	}
+	png_set_user_limits(png_ptr,100000,100000); // max image dimensions
+
+#if PNG_LIBPNG_VER >= 10400
+	// Number of ancillary chunks stored.
+	// I don't think we need any of these, but there appears to be no
+	// way to set the limit to 0. (0 is reserved to mean "unlimited".)
+	// I'll just set it to an arbitrary low number.
+	png_set_chunk_cache_max(png_ptr,50);
+#endif
+
+#if PNG_LIBPNG_VER >= 10401
+	png_set_chunk_malloc_max(png_ptr,1000000);
+#endif
 
 	info_ptr = png_create_info_struct(png_ptr);
 	if(!info_ptr) {
@@ -465,16 +461,9 @@ notrans:
 
 	p2d->bitssize = height*dib_bytesperrow;
 
-	p2d->dibsize=sizeof(BITMAPINFOHEADER) + 4*palette_entries +
-		(write_bitfields?12:0) + p2d->bitssize;;
+	p2d->dibsize=sizeof(BITMAPINFOHEADER) + 4*palette_entries + p2d->bitssize;
 
-	if(p2d->malloc_function) {
-		lpdib = (unsigned char*)(*(p2d->malloc_function))(p2d->userdata,p2d->dibsize);
-	}
-	else {
-		lpdib = (unsigned char*)calloc(p2d->dibsize,1);
-	}
-
+	lpdib = (unsigned char*)calloc(p2d->dibsize,1);
 
 	if(!lpdib) { rv=PNGD_E_NOMEM; goto abort; }
 	p2d->pdib = (LPBITMAPINFOHEADER)lpdib;
@@ -484,7 +473,7 @@ notrans:
 
 	// there is some redundancy here...
 	p2d->palette_offs=sizeof(BITMAPINFOHEADER);
-	p2d->bits_offs   =sizeof(BITMAPINFOHEADER) + 4*palette_entries + (write_bitfields?12:0);
+	p2d->bits_offs   =sizeof(BITMAPINFOHEADER) + 4*palette_entries;
 	dib_palette= &lpdib[p2d->palette_offs];
 	p2d->palette= (RGBQUAD*)dib_palette;
 	dib_bits   = &lpdib[p2d->bits_offs];
@@ -559,7 +548,7 @@ notrans:
 	p2d->pdib->biHeight=        height;
 	p2d->pdib->biPlanes=        1;
 	p2d->pdib->biBitCount=      dib_bpp;
-	p2d->pdib->biCompression=   write_bitfields?BI_BITFIELDS:BI_RGB;
+	p2d->pdib->biCompression=   BI_RGB;
 	// biSizeImage can also be 0 in uncompressed bitmaps
 	p2d->pdib->biSizeImage=     height*dib_bytesperrow;
 
@@ -613,17 +602,11 @@ void pngdib_p2d_free_dib(PNGDIB *p2d, BITMAPINFOHEADER* pdib)
 		p2d->pdib = NULL;
 	}
 	if(pdib) {
-		if(p2d->free_function) {
-			(*(p2d->free_function))(p2d->userdata,(void*)pdib);
-		}
-		else {
-			free((void*)pdib);
-		}
+		free((void*)pdib);
 	}
 }
 
-
-PNGDIB* _pngdib_init(void)
+PNGDIB* pngdib_init(void)
 {
 	struct p2d_struct *p2d;
 
@@ -637,8 +620,6 @@ PNGDIB* _pngdib_init(void)
 	return p2d;
 }
 
-
-
 int pngdib_done(PNGDIB *p2d)
 {
 	if(!p2d) return 0;
@@ -647,12 +628,6 @@ int pngdib_done(PNGDIB *p2d)
 
 	free(p2d);
 	return 1;
-}
-
-void pngdib_setcallback_pngptrhook(PNGDIB *p2d,
-        pngdib_pngptrhook_cb_type pngptrhookfn)
-{
-	p2d->pngptrhook_function = pngptrhookfn;
 }
 
 TCHAR* pngdib_get_error_msg(PNGDIB *p2d)
@@ -669,7 +644,6 @@ void* pngdib_get_userdata(PNGDIB* p2d)
 {
 	return p2d->userdata;
 }
-
 
 void pngdib_p2d_set_png_read_fn(PNGDIB *p2d, pngdib_read_cb_type readfunc)
 {
@@ -737,5 +711,13 @@ int pngdib_p2d_get_bgcolor(PNGDIB *p2d, unsigned char *pr, unsigned char *pg, un
 	return 0;
 }
 
+void pngdib_get_libpng_version(TCHAR *buf, int buflen)
+{
+#ifdef UNICODE
+	StringCchPrintf(buf,buflen,_T("%S"),png_get_libpng_ver(NULL));
+#else
+	StringCchPrintf(buf,buflen,"%s",png_get_libpng_ver(NULL));
+#endif
+}
 
 #endif TWPNG_SUPPORT_VIEWER
