@@ -68,7 +68,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\pngdib\Release\pngdib.lib ..\libpng-1.5.0\Release\libpng.lib ..\zlib-1.2.5\Release\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\pngdib\Release\pngdib.lib ..\libpng-1.5.2\Release\libpng.lib ..\zlib-1.2.5\Release\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -151,7 +151,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\pngdib\Release64\pngdib.lib ..\libpng-1.5.0\Release64\libpng.lib ..\zlib-1.2.5\Release64\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\pngdib\Release64\pngdib.lib ..\libpng-1.5.2\Release64\libpng.lib ..\zlib-1.2.5\Release64\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -233,7 +233,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\pngdib\Debug\pngdib.lib ..\libpng-1.5.0\Debug\libpng.lib ..\zlib-1.2.5\Debug\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\pngdib\Debug\pngdib.lib ..\libpng-1.5.2\Debug\libpng.lib ..\zlib-1.2.5\Debug\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
@@ -317,7 +317,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\pngdib\Debug64\pngdib.lib ..\libpng-1.5.0\Debug64\libpng.lib ..\zlib-1.2.5\Debug64\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\pngdib\Debug64\pngdib.lib ..\libpng-1.5.2\Debug64\libpng.lib ..\zlib-1.2.5\Debug64\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
@@ -400,7 +400,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\pngdib\DebugU\pngdib.lib ..\libpng-1.5.0\Debug\libpng.lib ..\zlib-1.2.5\Debug\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\pngdib\DebugU\pngdib.lib ..\libpng-1.5.2\Debug\libpng.lib ..\zlib-1.2.5\Debug\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
@@ -482,7 +482,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\pngdib\DebugU64\pngdib.lib ..\libpng-1.5.0\Debug64\libpng.lib ..\zlib-1.2.5\Debug64\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\pngdib\DebugU64\pngdib.lib ..\libpng-1.5.2\Debug64\libpng.lib ..\zlib-1.2.5\Debug64\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
@@ -564,7 +564,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\pngdib\ReleaseU\pngdib.lib ..\libpng-1.5.0\Release\libpng.lib ..\zlib-1.2.5\Release\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\pngdib\ReleaseU\pngdib.lib ..\libpng-1.5.2\Release\libpng.lib ..\zlib-1.2.5\Release\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -648,7 +648,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\pngdib\ReleaseU64\pngdib.lib ..\libpng-1.5.0\Release64\libpng.lib ..\zlib-1.2.5\Release64\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\pngdib\ReleaseU64\pngdib.lib ..\libpng-1.5.2\Release64\libpng.lib ..\zlib-1.2.5\Release64\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -920,7 +920,7 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.0"
+						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.2"
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
@@ -929,7 +929,7 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.0"
+						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.2"
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
@@ -938,7 +938,7 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.0"
+						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.2"
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
@@ -947,7 +947,7 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.0"
+						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.2"
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
@@ -956,7 +956,7 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.0"
+						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.2"
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
@@ -965,7 +965,7 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.0"
+						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.2"
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
@@ -974,7 +974,7 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.0"
+						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.2"
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
@@ -983,7 +983,7 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.0"
+						AdditionalIncludeDirectories="..\pngdib;..\libpng-1.5.2"
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
