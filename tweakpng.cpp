@@ -2966,10 +2966,6 @@ static void twpng_HandleAboutInitDialog(HWND hwnd)
 	twpng_get_libpng_version(buf2,200);
 	StringCchPrintf(buf1,1000,_T("\r\nUses libpng, version %s."),buf2);
 	StringCchCat(buf,4000,buf1);
-
-	twpng_get_pngdib_version(buf2,200);
-	StringCchPrintf(buf1,1000,_T("\r\nUses pngdib, version %s."),buf2);
-	StringCchCat(buf,4000,buf1);
 #else
 	StringCchCat(buf,4000,_T("\r\nCompiled without image viewing support."));
 #endif

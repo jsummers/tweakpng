@@ -23,7 +23,7 @@
 
 #ifdef TWPNG_SUPPORT_VIEWER
 
-#include <pngdib.h>
+#include "pngtodib.h"
 #include <png.h>
 #include <strsafe.h>
 
@@ -43,10 +43,10 @@ void twpng_get_libpng_version(TCHAR *buf, int buflen)
 #endif
 }
 
-void twpng_get_pngdib_version(TCHAR *buf, int buflen)
-{
-	StringCchCopy(buf,buflen,pngdib_get_version_string());
-}
+//void twpng_get_pngdib_version(TCHAR *buf, int buflen)
+//{
+//	StringCchCopy(buf,buflen,pngdib_get_version_string());
+//}
 
 void Viewer::GlobalInit()
 {
@@ -181,7 +181,7 @@ void Viewer::CalcStretchedSize()
 
 }
 
-static void PNGDIB_DECL my_pngptrhook(void *userdata, void *pngptr1)
+static void my_pngptrhook(void *userdata, void *pngptr1)
 {
 	png_structp png_ptr = (png_structp)pngptr1;
 
@@ -204,7 +204,7 @@ struct viewer_read_ctx {
 	Png *png;
 };
 
-static int PNGDIB_DECL my_read_fn(void *userdata, void *buf, int len)
+static int my_read_fn(void *userdata, void *buf, int len)
 {
 	DWORD ret;
 	struct viewer_read_ctx *read_ctx = (struct viewer_read_ctx *)userdata;
@@ -243,7 +243,7 @@ void Viewer::Update(Png *png1)
 	hcur=SetCursor(LoadCursor(NULL,IDC_WAIT));
 	cursor_flag=1;
 
-	p2d = pngdib_p2d_init();
+	p2d = _pngdib_init();
 
 	pngdib_setcallback_pngptrhook(p2d,my_pngptrhook);
 

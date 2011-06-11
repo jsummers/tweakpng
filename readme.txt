@@ -34,6 +34,8 @@ COPYING.txt
 drag2.cur
 icon_1.ico
 icon_2.ico
+pngtodib.cpp
+pngtodib.h
 readme.txt    (this file)
 resource.h
 tweakpng.cpp
@@ -57,6 +59,8 @@ charset.cpp
 tweakpng.cpp
 chunk.cpp
 viewer.cpp
+pngtodib.cpp
+pngtodib.h
 tweakpng.rc
 tweakpng.h
 icon_1.ico
@@ -74,13 +78,11 @@ There are three configurations available:
 
 1. With image viewing support
 
-All features will be available. Requires pngdib (v3.0.0 or higher), libpng 
-(version 1.2.2 or higher recommended), and zlib (version 1.1.4 or higher 
-recommended).
+All features will be available. Requires libpng (version 1.2.2 or higher
+recommended), and zlib (version 1.1.4 or higher recommended).
 
 This is the default configuration.
 
- pngdib: <http://entropymine.com/jason/pngdib/>
  libpng: <http://www.libpng.org/pub/png/>
  zlib: <http://zlib.net/>
 

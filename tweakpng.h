@@ -239,7 +239,6 @@ int convert_utf16_to_utf8(const WCHAR *src, int srclen,
 
 #ifdef TWPNG_SUPPORT_VIEWER
 void twpng_get_libpng_version(TCHAR *buf, int buflen);
-void twpng_get_pngdib_version(TCHAR *buf, int buflen);
 #endif
 
 class Png;
