@@ -38,6 +38,7 @@ pngtodib.cpp
 pngtodib.h
 tweakpng-src.txt    (this file)
 resource.h
+twpng-config.h
 tweakpng.cpp
 tweakpng.h
 tweakpng.rc
@@ -63,6 +64,8 @@ pngtodib.cpp
 pngtodib.h
 tweakpng.rc
 tweakpng.h
+twpng-config.h
+resource.h
 icon_1.ico
 icon_2.ico
 drag2.cur
@@ -93,7 +96,7 @@ You will be able to edit compressed text chunks.
 
 - comment out the 
 #define TWPNG_SUPPORT_VIEWER
-line in tweakpng.h
+line in twpng-config.h
 
 
 3. With no image viewing or compression support
@@ -104,7 +107,7 @@ unavailable, and you won't be able to view or edit compressed text chunks.
 - comment out the 
 #define TWPNG_SUPPORT_VIEWER
 #define TWPNG_USE_ZLIB
-lines in tweakpng.h
+lines in twpng-config.h
 
 
 Also, the program can be compiled as a Unicode application (DebugU and 

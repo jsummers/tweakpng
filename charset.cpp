@@ -19,6 +19,7 @@
 // API functions, but they don't work the same on all versions of Windows,
 // and anyway I was interested in trying to write my own functions to do this.
 
+#include "twpng-config.h"
 
 #include <windows.h>
 #include <tchar.h>

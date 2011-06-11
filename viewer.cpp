@@ -15,13 +15,14 @@
     See the file tweakpng-src.txt for more information.
 */
 
+#include "twpng-config.h"
+
+#ifdef TWPNG_SUPPORT_VIEWER
 
 #include <windows.h>
 #include <tchar.h>
 
 #include "tweakpng.h"
-
-#ifdef TWPNG_SUPPORT_VIEWER
 
 #include "pngtodib.h"
 #include <png.h>

@@ -17,6 +17,7 @@
     See the file tweakpng-src.txt for more information.
 */
 
+#include "twpng-config.h"
 
 #include <windows.h>
 #include <tchar.h>

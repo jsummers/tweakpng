@@ -3,18 +3,6 @@
 #ifndef TWEAKPNG_H
 #define TWEAKPNG_H
 
-// comment out the next line to compile without image viewing support
-#define TWPNG_SUPPORT_VIEWER
-
-// comment out the next line to compile without zlib
-// (required for image viewing, and editing compressed text chunks.)
-#define TWPNG_USE_ZLIB
-
-
-#if defined(TWPNG_USE_ZLIB) || defined(TWPNG_SUPPORT_VIEWER)
-#define TWPNG_HAVE_ZLIB
-#endif
-
 #define TWEAKPNG_VER_STRING      _T("1.4.1")
 #define TWEAKPNG_COPYRIGHT_DATE  _T("1999-2011")
 #define TWEAKPNG_HOMEPAGE        _T("http://entropymine.com/jason/tweakpng/")

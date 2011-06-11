@@ -1009,6 +1009,10 @@
 				RelativePath="tweakpng.h"
 				>
 			</File>
+			<File
+				RelativePath=".\twpng-config.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
