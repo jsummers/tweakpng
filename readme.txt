@@ -1,0 +1,112 @@
+TweakPNG:  A low-level PNG image file manipulation utility
+Version 1.4.1
+Copyright (c) 1999-2011 Jason Summers  <jason1@pobox.com>
+
+==================== License ====================
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
+
+
+A copy of the GNU General Public License is included in the file 
+COPYING.txt.
+
+
+========================================================
+
+
+The following files should be included in the source distribution:
+
+charset.cpp
+chunk.cpp
+COPYING.txt
+drag2.cur
+icon_1.ico
+icon_2.ico
+readme.txt    (this file)
+resource.h
+tweakpng.cpp
+tweakpng.h
+tweakpng.rc
+tweakpng.sln     (VC9 workspace file)
+tweakpng.vcproj  (VC9 project file)
+viewer.cpp
+
+
+To get the latest version of TweakPNG, visit the TweakPNG home page at 
+<http://entropymine.com/jason/tweakpng/>.
+
+The source code should be compatible with Microsoft Visual C++ version 5 
+and higher. It might also work in other modern C++ packages.
+
+Basically, to compile TweakPNG, you need to include the following files in 
+your project:
+
+charset.cpp
+tweakpng.cpp
+chunk.cpp
+viewer.cpp
+tweakpng.rc
+tweakpng.h
+icon_1.ico
+icon_2.ico
+drag2.cur
+
+Make sure you include the following potentially nondefault libraries:
+
+comdlg32.lib
+comctl32.lib
+
+
+There are three configurations available:
+
+
+1. With image viewing support
+
+All features will be available. Requires pngdib (v3.0.0 or higher), libpng 
+(version 1.2.2 or higher recommended), and zlib (version 1.1.4 or higher 
+recommended).
+
+This is the default configuration.
+
+ pngdib: <http://entropymine.com/jason/pngdib/>
+ libpng: <http://www.libpng.org/pub/png/>
+ zlib: <http://zlib.net/>
+
+2. With compression support (but no image viewing support)
+
+Requires zlib, but not libpng. The image viewer tool will be unavailable. 
+You will be able to edit compressed text chunks.
+
+- comment out the 
+#define TWPNG_SUPPORT_VIEWER
+line in tweakpng.h
+
+
+3. With no image viewing or compression support
+
+Does not require any third-party libraries. The image viewer will be 
+unavailable, and you won't be able to view or edit compressed text chunks.
+
+- comment out the 
+#define TWPNG_SUPPORT_VIEWER
+#define TWPNG_USE_ZLIB
+lines in tweakpng.h
+
+
+Also, the program can be compiled as a Unicode application (DebugU and 
+ReleaseU configurations if you use the included project file) or a 
+non-Unicode application (Debug and Release configurations). Non-Unicode 
+configurations do not support iTXt chunks.
+

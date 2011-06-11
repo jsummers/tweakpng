@@ -1,0 +1,853 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+//#include "afxres.h"
+#include "winresrc.h"
+#define IDC_STATIC      (-1)
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+ICONMAIN                ICON    DISCARDABLE     "icon_1.ico"
+ICONVIEWER              ICON    DISCARDABLE     "icon_2.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+MENUMAIN MENU DISCARDABLE 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New\tCtrl+N",                ID_NEW
+        MENUITEM "&Open...\tCtrl+O",            ID_OPEN
+        MENUITEM "Reopen\tCtrl+R",             ID_REOPEN
+        MENUITEM "&Save\tCtrl+S",               ID_SAVE
+        MENUITEM "Save &As...\tCtrl+Shift+S",   ID_SAVEAS
+        MENUITEM "&Close",                      ID_CLOSEDOCUMENT
+        MENUITEM SEPARATOR
+        MENUITEM "Check &Validity\tF5",         ID_CHECKPNG
+        MENUITEM "&File Signature...",          ID_SIGNATURE
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\tAlt+F4",               ID_EXIT
+    END
+    POPUP "&Edit"
+    BEGIN
+        MENUITEM "&Edit Chunk...\tEnter",       ID_EDITCHUNK
+        MENUITEM "&Delete\tDel",                ID_DELCHUNK
+        MENUITEM "Move &Up\tAlt+Up",            ID_MOVEUP
+        MENUITEM "Mo&ve Down\tAlt+Down",        ID_MOVEDOWN
+        MENUITEM SEPARATOR
+        MENUITEM "Cu&t\tCtrl+X",                ID_CUT
+        MENUITEM "&Copy\tCtrl+C",               ID_COPY
+        MENUITEM "&Paste\tCtrl+V",              ID_PASTE
+        MENUITEM SEPARATOR
+        MENUITEM "Combine Selected IDAT ",      ID_COMBINEIDAT
+        MENUITEM "Combine All &IDAT",           ID_COMBINEALLIDAT
+        MENUITEM "Split IDAT...",               ID_SPLITIDAT
+        MENUITEM SEPARATOR
+        MENUITEM "Import Chunk...",             ID_IMPORTCHUNK
+        MENUITEM "Export Chunk...",             ID_EXPORTCHUNK
+    END
+    POPUP "&Insert"
+    BEGIN
+        MENUITEM "acTL (APNG animation control", ID_NEWACTL
+        MENUITEM "bKGD (Background color)",     ID_NEWBKGD
+        MENUITEM "cHRM (Chromaticities)",       ID_NEWCHRM
+        MENUITEM "fcTL (APNG frame control)",   ID_NEWFCTL
+        MENUITEM "gAMA (Gamma)",                ID_NEWGAMA
+        MENUITEM "IEND (End of image)",         ID_NEWIEND
+        MENUITEM "IHDR (Image header)",         ID_NEWIHDR
+        MENUITEM "oFFs (Image offset)",         ID_NEWOFFS
+        MENUITEM "pHYs (Pixel size, aspect ratio)", ID_NEWPHYS
+        MENUITEM "PLTE (Palette)",              ID_NEWPLTE
+        MENUITEM "sBIT (Significant bits per sample)", ID_NEWSBIT
+        MENUITEM "sCAL (Physical scale)",       ID_NEWSCAL
+        MENUITEM "sRGB (sRGB color space indicator)", ID_NEWSRGB
+        MENUITEM "sTER (Stereo image indicator)", ID_NEWSTER
+        MENUITEM "tEXt/zTXt/iTXt (Text)\tCtrl+T",    ID_NEWTEXT
+        MENUITEM "tIME (Time of last modification)", ID_NEWTIME
+        MENUITEM "tRNS (Transparency)",         ID_NEWTRNS
+    END
+    POPUP "&Options"
+    BEGIN
+        MENUITEM "&Preferences...",             ID_PREFS
+        MENUITEM "Configure &Tools...",         ID_EDITTOOLS
+    END
+    POPUP "&Tools"
+    BEGIN
+        MENUITEM "1",                           ID_TOOL_1
+        MENUITEM "2",                           ID_TOOL_2
+        MENUITEM "3",                           ID_TOOL_3
+        MENUITEM "4",                           ID_TOOL_4
+        MENUITEM "5",                           ID_TOOL_5
+        MENUITEM "6",                           ID_TOOL_6
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&Contents\tF1",               ID_HELPCONTENTS
+        MENUITEM "&About...",                   ID_ABOUT
+    END
+END
+
+MENUVIEWER MENU DISCARDABLE 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Close Viewer",               ID_CLOSE
+    END
+    POPUP "&Options"
+    BEGIN
+        MENUITEM "&Gamma Correction",           ID_GAMMACORRECT
+        MENUITEM SEPARATOR
+        MENUITEM "Use &Image's Background Color", ID_BG_BKGD
+        MENUITEM "Use &Custom Background Color", ID_BG_CUSTOM
+        MENUITEM SEPARATOR
+        MENUITEM "Set Custom &Background Color...", ID_SETBG
+        POPUP "Window Background Color"
+        BEGIN
+            MENUITEM "Same As Image",               ID_WBG_SAMEASIMAGE
+            MENUITEM "Custom Background Color",     ID_WBG_CUSTOM
+            MENUITEM "System Default",              ID_WBG_SYSDEFAULT
+        END
+    END
+    POPUP "&Zoom"
+    BEGIN
+        MENUITEM "&Fit",                           ID_ZOOM_FIT
+        MENUITEM "12.5%",                          ID_ZOOM_1_8
+        MENUITEM "25%",                            ID_ZOOM_1_4
+        MENUITEM "50%",                            ID_ZOOM_1_2
+        MENUITEM "&100%",                          ID_ZOOM_1
+        MENUITEM "&200%",                          ID_ZOOM_2
+        MENUITEM "&400%",                          ID_ZOOM_4
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+ACCELTABLE ACCELERATORS DISCARDABLE 
+BEGIN
+    "1",            ID_TOOL_1,              VIRTKEY, CONTROL, NOINVERT
+    "2",            ID_TOOL_2,              VIRTKEY, CONTROL, NOINVERT
+    "3",            ID_TOOL_3,              VIRTKEY, CONTROL, NOINVERT
+    "4",            ID_TOOL_4,              VIRTKEY, CONTROL, NOINVERT
+    "5",            ID_TOOL_5,              VIRTKEY, CONTROL, NOINVERT
+    "6",            ID_TOOL_6,              VIRTKEY, CONTROL, NOINVERT
+    "A",            ID_SELECTALL,           VIRTKEY, CONTROL, NOINVERT
+    "C",            ID_COPY,                VIRTKEY, CONTROL, NOINVERT
+    "N",            ID_NEW,                 VIRTKEY, CONTROL, NOINVERT
+    "O",            ID_OPEN,                VIRTKEY, CONTROL, NOINVERT
+    "R",            ID_REOPEN,              VIRTKEY, CONTROL, NOINVERT
+    "S",            ID_SAVE,                VIRTKEY, CONTROL, NOINVERT
+    "S",            ID_SAVEAS,              VIRTKEY, CONTROL, SHIFT, NOINVERT
+    "T",            ID_NEWTEXT,             VIRTKEY, CONTROL, NOINVERT
+    "V",            ID_PASTE,               VIRTKEY, CONTROL, NOINVERT
+    VK_DELETE,      ID_DELCHUNK,            VIRTKEY, NOINVERT
+    VK_DOWN,        ID_MOVEDOWN,            VIRTKEY, ALT, NOINVERT
+    VK_F1,          ID_HELPCONTENTS,        VIRTKEY, NOINVERT
+    VK_F12,         ID_SAVEAS,              VIRTKEY, NOINVERT
+    VK_F5,          ID_CHECKPNG,            VIRTKEY, NOINVERT
+    VK_F7,          ID_IMGVIEWER,           VIRTKEY, NOINVERT
+    VK_TAB,         ID_SWITCHWINDOW,        VIRTKEY, CONTROL, NOINVERT
+    VK_UP,          ID_MOVEUP,              VIRTKEY, ALT, NOINVERT
+    "X",            ID_CUT,                 VIRTKEY, CONTROL, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+DLG_ABOUT DIALOGEX 0, 0, 309, 138
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About TweakPNG"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,252,117,50,14,WS_GROUP
+    ICON            "ICONMAIN",IDC_STATIC,7,7,21,20
+    EDITTEXT        IDC_ABOUTTEXT,40,7,262,108,ES_MULTILINE | ES_AUTOVSCROLL | 
+                    ES_READONLY | NOT WS_BORDER | WS_GROUP
+END
+
+DLG_TEXT DIALOGEX 0, 0, 300, 152
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_MAXIMIZEBOX | WS_POPUP | WS_CAPTION |
+    WS_SYSMENU | WS_THICKFRAME
+CAPTION "Text"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_TEXTTEXT,7,74,286,71,ES_MULTILINE | ES_WANTRETURN | 
+                    WS_VSCROLL | WS_GROUP
+    DEFPUSHBUTTON   "OK",IDOK,243,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,243,24,50,14
+    LTEXT           "Keyword",IDC_STATIC,7,10,28,8
+    COMBOBOX        IDC_TEXTKEYWORD,41,7,119,138,CBS_DROPDOWN | 
+                    CBS_AUTOHSCROLL | CBS_SORT | WS_VSCROLL | WS_GROUP | 
+                    WS_TABSTOP
+    CONTROL         "Compressed",IDC_TEXTCOMPRESSED,"Button",BS_AUTOCHECKBOX | 
+                    WS_GROUP | WS_TABSTOP,7,26,67,10
+    CONTROL         "International text",IDC_TEXTUNICODE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,75,25,101,10
+    LTEXT           "Language tag",IDC_TEXTLABELLANG,7,42,45,8
+    EDITTEXT        IDC_TEXTLANGUAGE,78,39,64,14,ES_AUTOHSCROLL
+    LTEXT           "Translated keyword",IDC_TEXTLABELTKW,7,59,63,8
+    EDITTEXT        IDC_TEXTTRNSLTKEYWORD,78,56,119,14,ES_AUTOHSCROLL
+END
+
+DLG_PREFS DIALOGEX 0, 0, 260, 63
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Preferences"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Compression level for new zTXt chunks",IDC_STATIC,7,7,
+                    125,8
+    COMBOBOX        IDC_CMPRLEVEL,75,19,93,160,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_GROUP | WS_TABSTOP
+    CONTROL         "Add TweakPNG to Explorer context menu",IDC_ADDTOMENU,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,7,46,
+                    148,10
+    DEFPUSHBUTTON   "OK",IDOK,203,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,203,24,50,14
+END
+
+DLG_GAMA DIALOGEX 0, 0, 209, 57
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "File gamma"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Gamma",IDC_STATIC,7,8,25,8
+    COMBOBOX        IDC_GAMMA,53,7,83,105,CBS_DROPDOWN | WS_VSCROLL | 
+                    WS_GROUP | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,152,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,152,24,50,14
+END
+
+DLG_PHYS DIALOGEX 0, 0, 268, 66
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Physical pixel size"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "X",IDC_STATIC,7,9,8,8
+    EDITTEXT        IDC_EDIT1,25,7,40,14,ES_AUTOHSCROLL | ES_NUMBER | WS_GROUP
+    LTEXT           "Y",IDC_STATIC,7,28,8,8
+    EDITTEXT        IDC_EDIT2,25,25,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Pixels per",IDC_STATIC,78,7,31,8
+    CONTROL         "unspecified units",IDC_RADIO0,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,119,7,69,10
+    CONTROL         "meter",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,119,18,33,
+                    10
+    DEFPUSHBUTTON   "OK",IDOK,211,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,211,24,50,14
+    LTEXT           "",IDC_ININCHES,7,50,164,8
+END
+
+DLG_SRGB DIALOGEX 0, 0, 178, 61
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "sRGB"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL         "Perceptual",IDC_SRGB_0,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP | WS_TABSTOP,7,7,50,10
+    CONTROL         "Relative Colorimetric",IDC_SRGB_1,"Button",
+                    BS_AUTORADIOBUTTON,7,19,80,10
+    CONTROL         "Saturation",IDC_SRGB_2,"Button",BS_AUTORADIOBUTTON,7,31,
+                    48,10
+    CONTROL         "Absolute Colorimetric",IDC_SRGB_3,"Button",
+                    BS_AUTORADIOBUTTON,7,43,81,10
+    DEFPUSHBUTTON   "OK",IDOK,121,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,121,24,50,14
+END
+
+DLG_STER DIALOGEX 0, 0, 178, 61
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "sTER"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL         "Cross-fuse layout",IDC_STER_0,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP | WS_TABSTOP,7,7,110,10
+    CONTROL         "Diverging-fuse layout",IDC_STER_1,"Button",
+                    BS_AUTORADIOBUTTON,7,19,110,10
+    DEFPUSHBUTTON   "OK",IDOK,121,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,121,24,50,14
+END
+
+DLG_SPLITIDAT DIALOGEX 0, 0, 230, 58
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Split IDAT chunk"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Size in bytes of first chunk (0-12345)",IDC_SPLIT_TEXT,
+                    7,7,163,8
+    EDITTEXT        IDC_SPLIT_SIZE,84,20,40,14,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_GROUP
+    CONTROL         "Repeat as many times as possible",IDC_SPLIT_REPEAT,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,7,41,
+                    122,10
+    DEFPUSHBUTTON   "OK",IDOK,173,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,173,24,50,14
+END
+
+DLG_NUMBER1 DIALOGEX 0, 0, 232, 58
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Title"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Label",IDC_LABEL1,7,7,160,8
+    EDITTEXT        IDC_EDIT1,45,26,40,14,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_GROUP
+    DEFPUSHBUTTON   "OK",IDOK,175,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,175,24,50,14
+END
+
+DLG_COLOR3 DIALOGEX 0, 0, 232, 90
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Title"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Label",IDC_LABEL1,7,7,160,8
+    LTEXT           "Red",IDC_STATIC,7,27,14,8
+    EDITTEXT        IDC_EDIT1,41,25,40,14,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_GROUP
+    LTEXT           "Green",IDC_STATIC,7,47,20,8
+    EDITTEXT        IDC_EDIT2,41,45,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Blue",IDC_STATIC,7,67,15,8
+    EDITTEXT        IDC_EDIT3,41,65,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    DEFPUSHBUTTON   "OK",IDOK,175,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,175,24,50,14
+END
+
+DLG_TIME DIALOGEX 0, 0, 232, 106
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Last modification time"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           ":",IDC_STATIC,39,65,8,8
+    LTEXT           ":",IDC_STATIC,75,65,8,8
+    LTEXT           "Enter time in universal time (UTC or GMC)",IDC_STATIC,7,
+                    7,135,8
+    LTEXT           "Year",IDC_STATIC,7,22,16,8
+    EDITTEXT        IDC_YEAR,7,33,40,14,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_GROUP
+    LTEXT           "Month",IDC_STATIC,53,22,21,8
+    COMBOBOX        IDC_MONTH,53,33,48,144,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "Day",IDC_STATIC,107,22,14,8
+    EDITTEXT        IDC_DAY,107,33,30,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Hour",IDC_STATIC,7,52,16,8
+    EDITTEXT        IDC_HOUR,7,63,30,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Minute",IDC_STATIC,43,52,22,8
+    EDITTEXT        IDC_MINUTE,43,63,30,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Second",IDC_STATIC,79,52,26,8
+    EDITTEXT        IDC_SECOND,79,63,30,14,ES_AUTOHSCROLL | ES_NUMBER
+    PUSHBUTTON      "Set to current time",IDC_BUTTON1,7,85,78,14,WS_GROUP
+    DEFPUSHBUTTON   "OK",IDOK,175,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,175,24,50,14
+END
+
+DLG_CHRM DIALOGEX 0, 0, 207, 100
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Chromaticities"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "X",IDC_STATIC,55,7,8,8
+    LTEXT           "Y",IDC_STATIC,101,7,8,8
+    LTEXT           "White point",IDC_STATIC,7,21,37,8
+    EDITTEXT        IDC_EDIT1,54,19,40,14,ES_AUTOHSCROLL | WS_GROUP
+    EDITTEXT        IDC_EDIT2,100,19,40,14,ES_AUTOHSCROLL
+    LTEXT           "Red",IDC_STATIC,7,40,14,8
+    EDITTEXT        IDC_EDIT3,54,38,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT4,100,38,40,14,ES_AUTOHSCROLL
+    LTEXT           "Green",IDC_STATIC,7,61,20,8
+    EDITTEXT        IDC_EDIT5,54,59,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT6,100,59,40,14,ES_AUTOHSCROLL
+    LTEXT           "Blue",IDC_STATIC,7,81,15,8
+    EDITTEXT        IDC_EDIT7,54,79,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT8,100,79,40,14,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,150,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,150,24,50,14
+END
+
+DLG_SIGNATURE DIALOGEX 0, 0, 156, 52
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Set file type signature"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CONTROL         "PNG",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON | WS_GROUP | 
+                    WS_TABSTOP,7,7,31,10
+    CONTROL         "MNG",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,7,21,33,10
+    CONTROL         "JNG",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON,7,35,30,10
+    DEFPUSHBUTTON   "OK",IDOK,99,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,99,24,50,14
+END
+
+DLG_COLOR2 DIALOGEX 0, 0, 232, 66
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Title"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,175,7,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,175,24,50,14
+    LTEXT           "Label",IDC_LABEL1,7,7,160,8
+    LTEXT           "Gray",IDC_STATIC,7,27,16,8
+    EDITTEXT        IDC_EDIT1,41,25,40,14,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_GROUP
+    LTEXT           "Alpha",IDC_STATIC,7,47,19,8
+    EDITTEXT        IDC_EDIT2,41,45,40,14,ES_AUTOHSCROLL | ES_NUMBER
+END
+
+DLG_COLOR4 DIALOGEX 0, 0, 232, 106
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Title"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "Label",IDC_LABEL1,7,7,160,8
+    LTEXT           "Red",IDC_STATIC,7,27,14,8
+    EDITTEXT        IDC_EDIT1,41,25,40,14,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_GROUP
+    LTEXT           "Green",IDC_STATIC,7,47,20,8
+    EDITTEXT        IDC_EDIT2,41,45,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Blue",IDC_STATIC,7,67,15,8
+    EDITTEXT        IDC_EDIT3,41,65,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Alpha",IDC_STATIC,7,87,19,8
+    EDITTEXT        IDC_EDIT4,41,85,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    DEFPUSHBUTTON   "OK",IDOK,175,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,175,24,50,14
+END
+
+DLG_TOOLS DIALOGEX 0, 0, 329, 185
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Configure tools"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "",IDC_STATIC1,7,7,315,43
+    LTEXT           "Name",IDC_STATIC,21,50,20,8
+    LTEXT           "Program",IDC_STATIC,114,50,27,8
+    LTEXT           "Parameters",IDC_STATIC,247,50,36,8
+    LTEXT           "1",IDC_STATIC,7,64,8,8
+    EDITTEXT        IDC_EDIT1,21,61,90,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDITC1,114,61,114,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_TOOL1BROWSE,228,61,16,14,WS_GROUP
+    EDITTEXT        IDC_EDITP1,247,61,75,14,ES_AUTOHSCROLL | WS_GROUP
+    LTEXT           "2",IDC_STATIC,7,81,8,8
+    EDITTEXT        IDC_EDIT2,21,78,90,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDITC2,114,78,114,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_TOOL2BROWSE,228,78,16,14,WS_GROUP
+    EDITTEXT        IDC_EDITP2,247,78,75,14,ES_AUTOHSCROLL | WS_GROUP
+    LTEXT           "3",IDC_STATIC,7,98,8,8
+    EDITTEXT        IDC_EDIT3,21,95,90,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDITC3,114,95,114,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_TOOL3BROWSE,228,95,16,14,WS_GROUP
+    EDITTEXT        IDC_EDITP3,247,95,75,14,ES_AUTOHSCROLL | WS_GROUP
+    LTEXT           "4",IDC_STATIC,7,115,8,8
+    EDITTEXT        IDC_EDIT4,21,112,90,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDITC4,114,112,114,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_TOOL4BROWSE,228,112,16,14,WS_GROUP
+    EDITTEXT        IDC_EDITP4,247,112,75,14,ES_AUTOHSCROLL | WS_GROUP
+    LTEXT           "5",IDC_STATIC,7,132,8,8
+    EDITTEXT        IDC_EDIT5,21,129,90,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDITC5,114,129,114,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_TOOL5BROWSE,228,129,16,14,WS_GROUP
+    EDITTEXT        IDC_EDITP5,247,129,75,14,ES_AUTOHSCROLL | WS_GROUP
+    LTEXT           "6",IDC_STATIC,7,149,8,8
+    EDITTEXT        IDC_EDIT6,21,146,90,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDITC6,114,146,114,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_TOOL6BROWSE,228,146,16,14,WS_GROUP
+    EDITTEXT        IDC_EDITP6,247,146,75,14,ES_AUTOHSCROLL | WS_GROUP
+    DEFPUSHBUTTON   "OK",IDOK,215,164,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,272,164,50,14
+END
+
+DLG_IHDR DIALOGEX 0, 0, 236, 122
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "PNG Header"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,179,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,179,24,50,14
+    LTEXT           "Warning: Modifying the fields below will probably make the image unreadable.",
+                    IDC_STATIC,7,7,153,20
+    LTEXT           "Width",IDC_STATIC,7,35,20,8
+    EDITTEXT        IDC_EDIT1,60,33,40,14,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_GROUP
+    LTEXT           "Height",IDC_STATIC,7,52,22,8
+    EDITTEXT        IDC_EDIT2,60,50,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Bit depth",IDC_STATIC1,7,70,29,8
+    EDITTEXT        IDC_EDIT3,60,68,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Color type",IDC_STATIC,7,88,32,8
+    COMBOBOX        IDC_COLORTYPE,60,86,106,75,CBS_DROPDOWNLIST | CBS_SORT | 
+                    WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Interlaced",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | 
+                    WS_GROUP | WS_TABSTOP,7,106,47,10
+END
+
+DLG_PLTE DIALOGEX 0, 0, 285, 260
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_MAXIMIZEBOX | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
+CAPTION "Palette"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,228,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,228,24,50,14
+    LTEXT           "I",IDC_STATIC_I,7,48,28,8
+    LTEXT           "R",IDC_STATIC_R,7,61,28,8
+    LTEXT           "G",IDC_STATIC_G,7,70,28,8
+    LTEXT           "B",IDC_STATIC_B,7,79,28,8
+    LTEXT           "A",IDC_STATIC_A,7,90,28,8
+    LTEXT           "[#palette]",IDC_STATIC1,7,10,90,8,0,WS_EX_RIGHT
+    EDITTEXT        IDC_EDIT1,102,7,30,14,ES_AUTOHSCROLL | ES_NUMBER | 
+                    WS_GROUP
+    LTEXT           "[#alpha]",IDC_STATIC2,7,27,90,8,0,WS_EX_RIGHT
+    EDITTEXT        IDC_EDIT2,102,24,30,14,ES_AUTOHSCROLL | ES_NUMBER
+    CHECKBOX        "Set bkgd",IDC_SETBKGD,147,7,50,14,BS_PUSHLIKE | 
+                    WS_GROUP
+    CHECKBOX        "Edit alpha",IDC_EDITALPHA,147,24,42,14,BS_PUSHLIKE
+    PUSHBUTTON      "*",IDC_EDITALLALPHA,190,24,7,14
+END
+
+DLG_ACTL DIALOGEX  0, 0, 186, 71
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "APNG animation control"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Number of frames",IDC_STATIC,7,10,56,8
+    EDITTEXT        IDC_EDIT1,74,7,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Number of plays",IDC_STATIC,7,29,52,8
+    EDITTEXT        IDC_EDIT2,74,26,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "Play indefinitely",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | 
+                    WS_GROUP | WS_TABSTOP,33,45,64,10
+    DEFPUSHBUTTON   "OK",IDOK,129,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,129,24,50,14
+END
+
+DLG_FCTL DIALOGEX  0, 0, 229, 129
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "APNG frame control"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Sequence number",IDC_STATIC,7,10,59,8
+    EDITTEXT        IDC_EDIT1,75,7,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Width",IDC_STATIC,7,28,20,8
+    EDITTEXT        IDC_EDIT2,39,25,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Height",IDC_STATIC,88,28,22,8
+    EDITTEXT        IDC_EDIT3,120,25,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "X offset",IDC_STATIC,7,46,25,8
+    EDITTEXT        IDC_EDIT4,39,43,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Y offset",IDC_STATIC,88,46,25,8
+    EDITTEXT        IDC_EDIT5,120,43,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Delay",IDC_STATIC,7,68,19,8
+    EDITTEXT        IDC_EDIT6,39,65,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "/",IDC_STATIC,85,68,8,8
+    EDITTEXT        IDC_EDIT7,96,65,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "seconds",IDC_STATIC,141,68,28,8
+    LTEXT           "Dispose",IDC_STATIC,7,90,26,8
+    COMBOBOX        IDC_DISPOSE,39,87,75,80,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    LTEXT           "Blend",IDC_STATIC,7,108,19,8
+    COMBOBOX        IDC_BLEND,39,105,75,80,CBS_DROPDOWNLIST | WS_VSCROLL | 
+                    WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,172,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,172,24,50,14
+END
+
+DLG_OFFS DIALOGEX 0, 0, 268, 66
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Image offset"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "X",IDC_STATIC,7,9,8,8
+    EDITTEXT        IDC_EDIT1,25,7,60,14,ES_AUTOHSCROLL | WS_GROUP
+    LTEXT           "Y",IDC_STATIC,7,28,8,8
+    EDITTEXT        IDC_EDIT2,25,25,60,14,ES_AUTOHSCROLL
+    CONTROL         "pixels",IDC_RADIO0,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,119,7,80,10
+    CONTROL         "micrometers",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,119,18,80,
+                    10
+    DEFPUSHBUTTON   "OK",IDOK,211,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,211,24,50,14
+    LTEXT           "",IDC_ININCHES,7,50,164,8
+END
+
+DLG_SCAL DIALOGEX 0, 0, 268, 66
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Physical scale of image subject"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "X",IDC_STATIC,7,9,8,8
+    EDITTEXT        IDC_EDIT1,25,7,60,14,ES_AUTOHSCROLL | WS_GROUP
+    LTEXT           "Y",IDC_STATIC,7,28,8,8
+    EDITTEXT        IDC_EDIT2,25,25,60,14,ES_AUTOHSCROLL
+    LTEXT           "Pixels per",IDC_STATIC,98,7,31,8
+    CONTROL         "meter",IDC_RADIO0,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,139,7,68,10
+    CONTROL         "radian",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON,139,18,68,
+                    10
+    DEFPUSHBUTTON   "OK",IDOK,211,7,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,211,24,50,14
+END
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    "DLG_ABOUT", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 302
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 131
+    END
+
+    "DLG_TEXT", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 293
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 145
+    END
+
+    "DLG_PREFS", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 253
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 56
+    END
+
+    "DLG_GAMA", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 202
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 50
+    END
+
+    "DLG_PHYS", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 261
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 58
+    END
+
+    "DLG_SRGB", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 171
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 54
+    END
+
+    "DLG_SPLITIDAT", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 223
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 51
+    END
+
+    "DLG_COLOR1", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 225
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 51
+    END
+
+    "DLG_COLOR3", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 225
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 79
+    END
+
+    "DLG_TIME", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 225
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 99
+    END
+
+    "DLG_CHRM", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 200
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 93
+    END
+
+    "DLG_SIGNATURE", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 149
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 45
+    END
+
+    "DLG_COLOR2", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 225
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 59
+    END
+
+    "DLG_COLOR4", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 225
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 99
+    END
+
+    "DLG_TOOLS", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 302
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 158
+    END
+
+    "DLG_IHDR", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 229
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 115
+    END
+
+    "DLG_PLTE", DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 278
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 253
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,4,1,1
+ PRODUCTVERSION 1,4,1,1
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904e4"
+        BEGIN
+            VALUE "Comments", "Website: http://entropymine.com/jason/tweakpng/\0"
+            VALUE "CompanyName", "Jason Summers\0"
+            VALUE "FileDescription", "TweakPNG: a low-level PNG image file editor\0"
+            VALUE "FileVersion", "1, 4, 1, 1\0"
+            VALUE "InternalName", "tweakpng\0"
+            VALUE "LegalCopyright", "Copyright (C) 1999-2011 Jason Summers\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OriginalFilename", "tweakpng.exe\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "TweakPNG\0"
+            VALUE "ProductVersion", "1, 4, 1, 1\0"
+            VALUE "SpecialBuild", "\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Cursor
+//
+
+DRAGCURSOR2             CURSOR  DISCARDABLE     "drag2.cur"
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

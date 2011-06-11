@@ -1,0 +1,11 @@
+*.suo
+*.ncb
+*.user
+/Debug
+/DebugU
+/Release
+/ReleaseU
+/Debug64
+/DebugU64
+/Release64
+/ReleaseU64
