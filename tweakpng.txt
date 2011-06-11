@@ -402,7 +402,7 @@ The C++ source code to TweakPNG is included in this package. It is intended
 to be compatible with Microsoft Visual C++ version 7(?) and higher. It might
 also work in other C++ packages.
 
-See the file readme.txt in tweakpng-src.zip for more information.
+See the file tweakpng-src.txt in tweakpng-src.zip for more information.
 
 
 ==================== File list ====================

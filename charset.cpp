@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    See the file readme.txt for more information.
+    See the file tweakpng-src.txt for more information.
 */
 
 // Note: I am aware of the WideCharToMultiByte and MultiByteToWideChar Windows
