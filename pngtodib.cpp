@@ -70,7 +70,7 @@ struct p2d_struct {
 
 	int has_bkgd;  // ==1 if there a bkgd chunk, and USE_BKGD flag
 	int is_grayscale;
-	int png_bit_depth;  // FIXME: rename this
+	int pngf_bit_depth;
 	int has_trns;
 	int color_type;
 	int has_alpha_channel;
@@ -81,7 +81,7 @@ struct p2d_struct {
 	int manual_gamma;
 
 	int palette_entries;
-	png_colorp png_palette;
+	png_colorp pngf_palette;
 };
 
 struct errstruct {
@@ -89,9 +89,9 @@ struct errstruct {
 	TCHAR *errmsg;
 };
 
-static void pngd_get_error_message(int rv,TCHAR *e, int e_len)
+static void pngd_get_error_message(int errcode, TCHAR *e, int e_len)
 {
-	switch(rv) {
+	switch(errcode) {
 	case PNGD_E_ERROR:   StringCchCopy(e,e_len,_T("Unknown error")); break;
 	case PNGD_E_NOMEM:   StringCchCopy(e,e_len,_T("Unable to allocate memory")); break;
 	case PNGD_E_LIBPNG:  StringCchCopy(e,e_len,_T("libpng reported an error")); break;
@@ -197,13 +197,13 @@ static void p2d_handle_background(PNGDIB *p2d, png_structp png_ptr, png_infop in
 			// process the background, store 8-bit RGB in bkgd_color
 			p2d->has_bkgd=1;
 
-			if(p2d->is_grayscale && p2d->png_bit_depth<8) {
+			if(p2d->is_grayscale && p2d->pngf_bit_depth<8) {
 				p2d->bkgd_color.red  =
 				p2d->bkgd_color.green=
 				p2d->bkgd_color.blue =
-					(unsigned char) ( (bg_colorp->gray*255)/( (1<<p2d->png_bit_depth)-1 ) );
+					(unsigned char) ( (bg_colorp->gray*255)/( (1<<p2d->pngf_bit_depth)-1 ) );
 			}
-			else if(p2d->png_bit_depth<=8) {
+			else if(p2d->pngf_bit_depth<=8) {
 				p2d->bkgd_color.red=(unsigned char)(bg_colorp->red);
 				p2d->bkgd_color.green=(unsigned char)(bg_colorp->green);
 				p2d->bkgd_color.blue =(unsigned char)(bg_colorp->blue);
@@ -221,11 +221,11 @@ static void p2d_handle_background(PNGDIB *p2d, png_structp png_ptr, png_infop in
 		return;
 	}
 
-	if(p2d->has_bkgd && (p2d->png_bit_depth>8 || !p2d->is_grayscale || p2d->has_alpha_channel)) {
+	if(p2d->has_bkgd && (p2d->pngf_bit_depth>8 || !p2d->is_grayscale || p2d->has_alpha_channel)) {
 		png_set_background(png_ptr, bg_colorp,
 			   PNG_BACKGROUND_GAMMA_FILE, 1, 1.0);
 	}
-	else if(p2d->is_grayscale && p2d->has_trns && p2d->png_bit_depth<=8
+	else if(p2d->is_grayscale && p2d->has_trns && p2d->pngf_bit_depth<=8
 		&& (p2d->has_bkgd || (p2d->use_custom_bg_flag)) )
 	{
 		// grayscale binarytrans,<=8bpp: transparency is handle manually
@@ -248,7 +248,7 @@ static void p2d_handle_background(PNGDIB *p2d, png_structp png_ptr, png_infop in
 		// Not sure if that's a libpng bug or not.
 		bkgd.gray  = p2d->bgcolor.red;
 
-		if(p2d->png_bit_depth>8) {
+		if(p2d->pngf_bit_depth>8) {
 			bkgd.red  = (bkgd.red  <<8)|bkgd.red; 
 			bkgd.green= (bkgd.green<<8)|bkgd.green;
 			bkgd.blue = (bkgd.blue <<8)|bkgd.blue;
@@ -256,7 +256,7 @@ static void p2d_handle_background(PNGDIB *p2d, png_structp png_ptr, png_infop in
 		}
 
 		if(p2d->is_grayscale) {
-			/* assert(p2d->png_bit_depth>8); */
+			/* assert(p2d->pngf_bit_depth>8); */
 
 			/* Need to expand to full RGB if unless background is pure gray */
 			if(bkgd.red!=bkgd.green || bkgd.red!=bkgd.blue) {
@@ -316,7 +316,7 @@ static void p2d_handle_gamma(PNGDIB *p2d, png_structp png_ptr, png_infop info_pt
 	p2d->manual_gamma=0;
 	if(p2d->gamma_correction) {
 
-		if(!p2d->is_grayscale || p2d->png_bit_depth>8 || p2d->has_alpha_channel) {
+		if(!p2d->is_grayscale || p2d->pngf_bit_depth>8 || p2d->has_alpha_channel) {
 			png_set_gamma(png_ptr, p2d->screen_gamma, p2d->file_gamma);
 			//png_ptr->transformations |= 0x2000; // hack for old libpng versions
 		}
@@ -338,9 +338,9 @@ static void p2d_read_or_create_palette(PNGDIB *p2d, png_structp png_ptr, png_inf
 	switch(p2d->color_type) {
 	case PNG_COLOR_TYPE_PALETTE:
 		for(i=0;i<p2d->palette_entries;i++) {
-			p2d->palette[i].rgbRed   = p2d->png_palette[i].red;
-			p2d->palette[i].rgbGreen = p2d->png_palette[i].green;
-			p2d->palette[i].rgbBlue  = p2d->png_palette[i].blue;
+			p2d->palette[i].rgbRed   = p2d->pngf_palette[i].red;
+			p2d->palette[i].rgbGreen = p2d->pngf_palette[i].green;
+			p2d->palette[i].rgbBlue  = p2d->pngf_palette[i].blue;
 		}
 		break;
 	case PNG_COLOR_TYPE_GRAY:
@@ -401,12 +401,12 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	unsigned char *dib_bits;
 	int dib_bpp, dib_bytesperrow;
 	int j;
-	int rv;
+	int retval;
 	size_t palette_offs;
 
 	p2d->manual_trns=0;
 	p2d->has_trns=p2d->has_bkgd=0;
-	rv=PNGD_E_ERROR;
+	retval=PNGD_E_ERROR;
 	png_ptr=NULL;
 	info_ptr=NULL;
 	row_pointers=NULL;
@@ -433,7 +433,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,(void*)(&errinfo),
 		my_png_error_fn, my_png_warning_fn);
-	if(!png_ptr) { rv=PNGD_E_NOMEM; goto abort; }
+	if(!png_ptr) { retval=PNGD_E_NOMEM; goto done; }
 
 	png_set_user_limits(png_ptr,100000,100000); // max image dimensions
 
@@ -452,22 +452,22 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	info_ptr = png_create_info_struct(png_ptr);
 	if(!info_ptr) {
 		//png_destroy_read_struct(&png_ptr, (png_infopp)NULL, (png_infopp)NULL);
-		rv=PNGD_E_NOMEM; goto abort;
+		retval=PNGD_E_NOMEM; goto done;
 	}
 
 	if(setjmp(jbuf)) {
 		// we'll get here if an error occurred in any of the following
 		// png_ functions
 
-		rv=PNGD_E_LIBPNG;
-		goto abort;
+		retval=PNGD_E_LIBPNG;
+		goto done;
 	}
 
 	png_set_read_fn(png_ptr, (void*)p2d, my_png_read_fn_custom);
 
 	png_read_info(png_ptr, info_ptr);
 
-	png_get_IHDR(png_ptr, info_ptr, &width, &height, &p2d->png_bit_depth, &p2d->color_type,
+	png_get_IHDR(png_ptr, info_ptr, &width, &height, &p2d->pngf_bit_depth, &p2d->color_type,
 		&interlace_type, NULL, NULL);
 
 	p2d->is_grayscale = !(p2d->color_type&PNG_COLOR_MASK_COLOR);
@@ -488,7 +488,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 		png_set_strip_alpha(png_ptr);
 	}
 
-	if(p2d->png_bit_depth>8)
+	if(p2d->pngf_bit_depth>8)
 		png_set_strip_16(png_ptr);
 
 	p2d_handle_gamma(p2d,png_ptr,info_ptr);
@@ -508,19 +508,19 @@ int pngdib_p2d_run(PNGDIB *p2d)
 		png_set_bgr(png_ptr);
 		break;
 	case PNG_COLOR_TYPE_PALETTE:
-		dib_bpp=p2d->png_bit_depth;
-		png_get_PLTE(png_ptr,info_ptr,&p2d->png_palette,&p2d->palette_entries);
+		dib_bpp=p2d->pngf_bit_depth;
+		png_get_PLTE(png_ptr,info_ptr,&p2d->pngf_palette,&p2d->palette_entries);
 		break;
 	case PNG_COLOR_TYPE_GRAY:
 	case PNG_COLOR_TYPE_GRAY_ALPHA:
-		dib_bpp=p2d->png_bit_depth;
-		if(p2d->png_bit_depth>8) dib_bpp=8;
+		dib_bpp=p2d->pngf_bit_depth;
+		if(p2d->pngf_bit_depth>8) dib_bpp=8;
 		p2d->palette_entries= 1<<dib_bpp;
 		// we'll construct a grayscale palette later
 		break;
 	default:
-		rv=PNGD_E_BADPNG;
-		goto abort;
+		retval=PNGD_E_BADPNG;
+		goto done;
 	}
 
 	if(dib_bpp==2) dib_bpp=4;
@@ -540,7 +540,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 
 	lpdib = (unsigned char*)calloc(p2d->dibsize,1);
 
-	if(!lpdib) { rv=PNGD_E_NOMEM; goto abort; }
+	if(!lpdib) { retval=PNGD_E_NOMEM; goto done; }
 	p2d->pdib = (LPBITMAPINFOHEADER)lpdib;
 
 	////////
@@ -561,7 +561,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	//////// Allocate row_pointers, which point to each row in the DIB we allocated.
 
 	row_pointers=(unsigned char**)malloc(height*sizeof(unsigned char*));
-	if(!row_pointers) { rv=PNGD_E_NOMEM; goto abort; }
+	if(!row_pointers) { retval=PNGD_E_NOMEM; goto done; }
 
 	for(j=0;j<(int)height;j++) {
 		row_pointers[height-1-j]= &dib_bits[j*dib_bytesperrow];
@@ -575,9 +575,9 @@ int pngdib_p2d_run(PNGDIB *p2d)
 
 	// special handling for this bit depth, since it doesn't exist in DIBs
 	// expand 2bpp to 4bpp
-	if(p2d->png_bit_depth==2) {
+	if(p2d->pngf_bit_depth==2) {
 		if(!p2d_convert_2bit_to_4bit(p2d,width,height,row_pointers)) {
-			rv=PNGD_E_NOMEM; goto abort;
+			retval=PNGD_E_NOMEM; goto done;
 		}
 	}
 
@@ -623,7 +623,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 
 	return PNGD_E_SUCCESS;
 
-abort:
+done:
 
 	if(png_ptr) png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp)NULL);
 	if(row_pointers) free((void*)row_pointers);
@@ -634,10 +634,10 @@ abort:
 	// If we don't have an error message yet, use a
 	// default one based on the code
 	if(!lstrlen(p2d->errmsg)) {
-		pngd_get_error_message(rv,p2d->errmsg,PNGDIB_ERRMSG_MAX);
+		pngd_get_error_message(retval,p2d->errmsg,PNGDIB_ERRMSG_MAX);
 	}
 
-	return rv;
+	return retval;
 }
 
 void pngdib_p2d_free_dib(PNGDIB *p2d, BITMAPINFOHEADER* pdib)
