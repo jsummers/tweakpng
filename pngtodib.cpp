@@ -24,7 +24,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <malloc.h>
 #include <math.h>
 
@@ -35,8 +34,17 @@
 
 #define PNGDIB_ERRMSG_MAX 200
 
+// Color correction methods
+#define P2D_CC_GAMMA 1
+#define P2D_CC_SRGB  2
+
+
 struct PNGD_COLOR_struct {
 	unsigned char red, green, blue, reserved;
+};
+
+struct PNGD_COLOR_fltpt_struct {
+	double red, green, blue;
 };
 
 struct p2d_struct {
@@ -45,18 +53,20 @@ struct p2d_struct {
 
 	pngdib_read_cb_type read_cb;
 
+	png_uint_32 width, height;
+
 	int use_file_bg_flag;
+
+	struct PNGD_COLOR_struct bkgd_color_custom_srgb; // sRGB color space, 0-255
+	struct PNGD_COLOR_fltpt_struct bkgd_color_custom_linear; // linear, 0.0-1.0
 	int use_custom_bg_flag;
 
-	// TODO: I don't understand exactly what the following 3 variables do,
-	// but I'm planning major changes to the background color code, so they
-	// will probably be replaced at some point.
-	struct PNGD_COLOR_struct bkgd_color; // Background color read from PNG file(?)
-	struct PNGD_COLOR_struct bgcolor; // Custom background color set by caller(?)
-	int bgcolor_returned; // Does bgcolor contain a color that can be returned to the app(?)
+	struct PNGD_COLOR_struct bkgd_color_applied_src;
+	struct PNGD_COLOR_struct bkgd_color_applied_srgb;
+	struct PNGD_COLOR_fltpt_struct bkgd_color_applied_linear;
+	int bkgd_color_applied_flag;
 
-	int gamma_correction; // should we gamma correct (using screen_gamma)?
-	double screen_gamma;
+	int color_correction_enabled;
 
 	BITMAPINFOHEADER*   pdib;
 	int        dibsize;
@@ -68,20 +78,29 @@ struct p2d_struct {
 	int        res_units;
 	int        res_valid;  // are res_x, res_y, res_units valid?
 
-	int has_bkgd;  // ==1 if there a bkgd chunk, and USE_BKGD flag
+	png_structp png_ptr;
+	png_infop info_ptr;
+
 	int is_grayscale;
 	int pngf_bit_depth;
 	int has_trns;
 	int color_type;
-	int has_alpha_channel;
-	int trns_color;
 	int manual_trns;
 
-	double file_gamma;
-	int manual_gamma;
+	// Color information about the source image. The destination image is always sRGB.
+	int color_correction_type; // P2D_CC_*
+	double file_gamma; // Used if color_correction_type==P2D_CC_GAMMA
 
 	int palette_entries;
 	png_colorp pngf_palette;
+
+	unsigned char **dib_row_pointers;
+
+	double *src_to_linear_table;
+	unsigned char *src_to_dst_table;
+	unsigned char *linear_to_srgb_table;
+
+	int need_gray_palette;
 };
 
 struct errstruct {
@@ -140,41 +159,17 @@ static void my_png_read_fn_custom(png_structp png_ptr,
 	}
 }
 
-// This function should perform identically to libpng's gamma correction.
-// I'd prefer to have libpng do all gamma correction itself,
-// but I can't figure out how to do that efficiently.
-static void gamma_correct(double screen_gamma,double file_gamma,
-	 unsigned char *red, unsigned char *green, unsigned char *blue)
-{
-	double g;
-
-#ifndef PNG_GAMMA_THRESHOLD
-#  define PNG_GAMMA_THRESHOLD 0.05
-#endif
-
-	if(fabs(screen_gamma*file_gamma-1.0)<=PNG_GAMMA_THRESHOLD) return;
-
-	if (screen_gamma>0.000001)
-		g=1.0/(file_gamma*screen_gamma);
-	else
-		g=1.0;
-
-	(*red)   = (unsigned char)(pow((double)(*red  )/255.0,g)*255.0+0.5);
-	(*green) = (unsigned char)(pow((double)(*green)/255.0,g)*255.0+0.5);
-	(*blue)  = (unsigned char)(pow((double)(*blue )/255.0,g)*255.0+0.5);
-}
-
 // Reads pHYs chunk, sets p2d->res_*.
-static void p2d_read_density(PNGDIB *p2d, png_structp png_ptr, png_infop info_ptr)
+static void p2d_read_density(PNGDIB *p2d)
 {
 	int has_phys;
 	int res_unit_type;
 	png_uint_32 res_x, res_y;
 
-	has_phys=png_get_valid(png_ptr,info_ptr,PNG_INFO_pHYs);
+	has_phys=png_get_valid(p2d->png_ptr,p2d->info_ptr,PNG_INFO_pHYs);
 	if(!has_phys) return;
 
-	png_get_pHYs(png_ptr,info_ptr,&res_x,&res_y,&res_unit_type);
+	png_get_pHYs(p2d->png_ptr,p2d->info_ptr,&res_x,&res_y,&res_unit_type);
 	if(res_x<1 || res_y<1) return;
 
 	p2d->res_x=res_x;
@@ -183,188 +178,115 @@ static void p2d_read_density(PNGDIB *p2d, png_structp png_ptr, png_infop info_pt
 	p2d->res_valid=1;
 }
 
-static void p2d_handle_background(PNGDIB *p2d, png_structp png_ptr, png_infop info_ptr)
+static double src255_to_linear_sample(PNGDIB *p2d, unsigned char sample)
 {
-	png_color_16p bg_colorp;  // background color (if has_bkgd)
-	png_color_16p temp_colorp;
-	png_color_16 bkgd; // used with png_set_background
-	png_bytep trns_trans;
-	int i;
-
-	// look for bKGD chunk, and process if applicable
-	if(p2d->use_file_bg_flag) {
-		if(png_get_bKGD(png_ptr, info_ptr, &bg_colorp)) {
-			// process the background, store 8-bit RGB in bkgd_color
-			p2d->has_bkgd=1;
-
-			if(p2d->is_grayscale && p2d->pngf_bit_depth<8) {
-				p2d->bkgd_color.red  =
-				p2d->bkgd_color.green=
-				p2d->bkgd_color.blue =
-					(unsigned char) ( (bg_colorp->gray*255)/( (1<<p2d->pngf_bit_depth)-1 ) );
-			}
-			else if(p2d->pngf_bit_depth<=8) {
-				p2d->bkgd_color.red=(unsigned char)(bg_colorp->red);
-				p2d->bkgd_color.green=(unsigned char)(bg_colorp->green);
-				p2d->bkgd_color.blue =(unsigned char)(bg_colorp->blue);
-			}
-			else {
-				p2d->bkgd_color.red=(unsigned char)(bg_colorp->red>>8);
-				p2d->bkgd_color.green=(unsigned char)(bg_colorp->green>>8);
-				p2d->bkgd_color.blue =(unsigned char)(bg_colorp->blue>>8);
-			}
-		}
+	if(p2d->src_to_linear_table) {
+		return p2d->src_to_linear_table[sample];
 	}
+	return ((double)sample)/255.0;
+}
 
-	if( !(p2d->color_type & PNG_COLOR_MASK_ALPHA) && !p2d->has_trns) {
-		// If no transparency, we can skip this whole background-color mess.
+static unsigned char src255_to_srgb255_sample(PNGDIB *p2d, unsigned char sample)
+{
+	if(p2d->src_to_dst_table) {
+		return p2d->src_to_dst_table[sample];
+	}
+	return sample;
+}
+
+static void p2d_read_bgcolor(PNGDIB *p2d)
+{
+	png_color_16p bg_colorp;
+	unsigned char tmpcolor;
+	int has_bkgd;
+
+	if(!p2d->use_file_bg_flag) {
+		// Using the background from the file is disabled.
 		return;
 	}
 
-	if(p2d->has_bkgd && (p2d->pngf_bit_depth>8 || !p2d->is_grayscale || p2d->has_alpha_channel)) {
-		png_set_background(png_ptr, bg_colorp,
-			   PNG_BACKGROUND_GAMMA_FILE, 1, 1.0);
+	has_bkgd = png_get_bKGD(p2d->png_ptr, p2d->info_ptr, &bg_colorp);
+	if(!has_bkgd) {
+		return;
 	}
-	else if(p2d->is_grayscale && p2d->has_trns && p2d->pngf_bit_depth<=8
-		&& (p2d->has_bkgd || (p2d->use_custom_bg_flag)) )
-	{
-		// grayscale binarytrans,<=8bpp: transparency is handle manually
-		// by modifying a palette entry (later)
-		png_get_tRNS(png_ptr,info_ptr,&trns_trans, &i, &temp_colorp);
-		if(i>=1) {
-			p2d->trns_color= temp_colorp->gray; // corresponds to a palette entry
-			p2d->manual_trns=1;
+
+	if(p2d->is_grayscale) {
+		if(p2d->pngf_bit_depth<8) {
+			tmpcolor = (unsigned char) ( (bg_colorp->gray*255)/( (1<<p2d->pngf_bit_depth)-1 ) );
 		}
-	}
-	else if(!p2d->has_bkgd && (p2d->has_trns || p2d->has_alpha_channel) && 
-		(p2d->use_custom_bg_flag) ) 
-	{      // process most CUSTOM background colors
-		bkgd.index = 0; // unused
-		bkgd.red   = p2d->bgcolor.red;
-		bkgd.green = p2d->bgcolor.green;
-		bkgd.blue  = p2d->bgcolor.blue;
-
-		// libpng may use bkgd.gray if bkgd.red==bkgd.green==bkgd.blue.
-		// Not sure if that's a libpng bug or not.
-		bkgd.gray  = p2d->bgcolor.red;
-
-		if(p2d->pngf_bit_depth>8) {
-			bkgd.red  = (bkgd.red  <<8)|bkgd.red; 
-			bkgd.green= (bkgd.green<<8)|bkgd.green;
-			bkgd.blue = (bkgd.blue <<8)|bkgd.blue;
-			bkgd.gray = (bkgd.gray <<8)|bkgd.gray;
-		}
-
-		if(p2d->is_grayscale) {
-			/* assert(p2d->pngf_bit_depth>8); */
-
-			/* Need to expand to full RGB if unless background is pure gray */
-			if(bkgd.red!=bkgd.green || bkgd.red!=bkgd.blue) {
-				png_set_gray_to_rgb(png_ptr);
-
-				// png_set_tRNS_to_alpha() is called here because otherwise
-				// binary transparency for 16-bps grayscale images doesn't
-				// work. Libpng will think black pixels are transparent.
-				// I don't know exactly why it works. It does *not* add an
-				// alpha channel, as you might think (adding an alpha
-				// channnel makes no sense if you are using 
-				// png_set_background).
-				//
-				// Here's an alternate hack that also seems to work, but
-				// uses direct structure access:
-				//
-				// png_ptr->trans_values.red   =    				
-				//  png_ptr->trans_values.green =
-				//	png_ptr->trans_values.blue  = png_ptr->trans_values.gray;
-				if(p2d->has_trns) 
-					png_set_tRNS_to_alpha(png_ptr);
-
-				png_set_background(png_ptr, &bkgd,
-					  PNG_BACKGROUND_GAMMA_SCREEN, 0, 1.0);
-
-			}
-			else {  // gray custom background
-				png_set_background(png_ptr, &bkgd,
-					  PNG_BACKGROUND_GAMMA_SCREEN, 1, 1.0);
-			}
-
+		else if(p2d->pngf_bit_depth==16) {
+			tmpcolor = (unsigned char)(bg_colorp->gray>>8);
 		}
 		else {
-			png_set_background(png_ptr, &bkgd,
-				  PNG_BACKGROUND_GAMMA_SCREEN, 0, 1.0);
+			tmpcolor = (unsigned char)(bg_colorp->gray);
 		}
-	}
-}
 
-static void p2d_handle_gamma(PNGDIB *p2d, png_structp png_ptr, png_infop info_ptr)
-{
-	int has_gama;
-	int intent;
-
-	if (png_get_sRGB(png_ptr, info_ptr, &intent)) {
-		has_gama=1;
-		p2d->file_gamma = 0.45455;
+		p2d->bkgd_color_applied_src.red  = p2d->bkgd_color_applied_src.green = p2d->bkgd_color_applied_src.blue = tmpcolor;
+		p2d->bkgd_color_applied_flag = 1;
 	}
-	else if(png_get_gAMA(png_ptr, info_ptr, &p2d->file_gamma)) {
-		has_gama=1;
+	else if(p2d->pngf_bit_depth<=8) { // RGB[A]8 or palette
+		p2d->bkgd_color_applied_src.red  =(unsigned char)(bg_colorp->red);
+		p2d->bkgd_color_applied_src.green=(unsigned char)(bg_colorp->green);
+		p2d->bkgd_color_applied_src.blue =(unsigned char)(bg_colorp->blue);
+		p2d->bkgd_color_applied_flag = 1;
 	}
 	else {
-		has_gama=0;
-		p2d->file_gamma = 0.45455;
+		p2d->bkgd_color_applied_src.red  =(unsigned char)(bg_colorp->red>>8);
+		p2d->bkgd_color_applied_src.green=(unsigned char)(bg_colorp->green>>8);
+		p2d->bkgd_color_applied_src.blue =(unsigned char)(bg_colorp->blue>>8);
+		p2d->bkgd_color_applied_flag = 1;
 	}
 
-	p2d->manual_gamma=0;
-	if(p2d->gamma_correction) {
+	if(!p2d->bkgd_color_applied_flag) return;
 
-		if(!p2d->is_grayscale || p2d->pngf_bit_depth>8 || p2d->has_alpha_channel) {
-			png_set_gamma(png_ptr, p2d->screen_gamma, p2d->file_gamma);
-			//png_ptr->transformations |= 0x2000; // hack for old libpng versions
-		}
-		else p2d->manual_gamma=1;
+	p2d->bkgd_color_applied_linear.red   = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.red);
+	p2d->bkgd_color_applied_linear.green = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.green);
+	p2d->bkgd_color_applied_linear.blue  = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.blue);
 
-		if(p2d->has_bkgd) {
-			// Gamma correct the background color (if we got it from the file)
-			// before returning it to the app.
-			gamma_correct(p2d->screen_gamma,p2d->file_gamma,&p2d->bkgd_color.red,&p2d->bkgd_color.green,&p2d->bkgd_color.blue);
-		}
+	p2d->bkgd_color_applied_srgb.red   = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.red);
+	p2d->bkgd_color_applied_srgb.green = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.green);
+	p2d->bkgd_color_applied_srgb.blue  = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.blue);
+}
+
+static void p2d_read_gamma(PNGDIB *p2d)
+{
+	int intent;
+
+	if(!p2d->color_correction_enabled) return;
+
+	if (png_get_sRGB(p2d->png_ptr, p2d->info_ptr, &intent)) {
+		p2d->color_correction_type = P2D_CC_SRGB;
+		p2d->file_gamma = 0.45455;
+	}
+	else if(png_get_gAMA(p2d->png_ptr, p2d->info_ptr, &p2d->file_gamma)) {
+		if(p2d->file_gamma<0.01) p2d->file_gamma=0.01;
+		if(p2d->file_gamma>10.0) p2d->file_gamma=10.0;
+		p2d->color_correction_type = P2D_CC_GAMMA;
+	}
+	else {
+		// Assume unlabeled images are sRGB.
+		p2d->color_correction_type = P2D_CC_SRGB;
+		p2d->file_gamma = 0.45455;
 	}
 }
 
-static void p2d_read_or_create_palette(PNGDIB *p2d, png_structp png_ptr, png_infop info_ptr)
+static void p2d_read_or_create_palette(PNGDIB *p2d)
 {
 	int i;
 
-	// set up the DIB palette, if needed
-	switch(p2d->color_type) {
-	case PNG_COLOR_TYPE_PALETTE:
+	if(p2d->need_gray_palette) {
 		for(i=0;i<p2d->palette_entries;i++) {
-			p2d->palette[i].rgbRed   = p2d->pngf_palette[i].red;
-			p2d->palette[i].rgbGreen = p2d->pngf_palette[i].green;
-			p2d->palette[i].rgbBlue  = p2d->pngf_palette[i].blue;
+			p2d->palette[i].rgbRed   = i;
+			p2d->palette[i].rgbGreen = i;
+			p2d->palette[i].rgbBlue  = i;
 		}
-		break;
-	case PNG_COLOR_TYPE_GRAY:
-	case PNG_COLOR_TYPE_GRAY_ALPHA:
-		for(i=0;i<p2d->palette_entries;i++) {
-			p2d->palette[i].rgbRed   =
-			p2d->palette[i].rgbGreen =
-			p2d->palette[i].rgbBlue  = (i*255)/(p2d->palette_entries-1);
-			if(p2d->manual_gamma) {
-				gamma_correct(p2d->screen_gamma,p2d->file_gamma,
-					  &(p2d->palette[i].rgbRed),
-					  &(p2d->palette[i].rgbGreen),
-					  &(p2d->palette[i].rgbBlue));
-			}
-		}
-		if(p2d->manual_trns) {
-			p2d->palette[p2d->trns_color].rgbRed   = p2d->bkgd_color.red;
-			p2d->palette[p2d->trns_color].rgbGreen = p2d->bkgd_color.green;
-			p2d->palette[p2d->trns_color].rgbBlue  = p2d->bkgd_color.blue;
-		}
-		break;
+		return;
 	}
+
+	// TODO: Palette reading code will go here.
 }
 
+#if 0
 static int p2d_convert_2bit_to_4bit(PNGDIB *p2d, png_uint_32 width, png_uint_32 height,
    unsigned char **row_pointers)
 {
@@ -386,16 +308,201 @@ static int p2d_convert_2bit_to_4bit(PNGDIB *p2d, png_uint_32 width, png_uint_32 
 	free((void*)tmprow);
 	return 1;
 }
+#endif
+
+static double gamma_to_linear_sample(double v, double gamma)
+{
+	return pow(v,gamma);
+}
+
+static double linear_to_srgb_sample(double v_linear)
+{
+	if(v_linear <= 0.0031308) {
+		return 12.92*v_linear;
+	}
+	return 1.055*pow(v_linear,1.0/2.4) - 0.055;
+}
+
+static double srgb_to_linear_sample(double v_srgb)
+{
+	if(v_srgb<=0.04045) {
+		return v_srgb/12.92;
+	}
+	else {
+		return pow( (v_srgb+0.055)/(1.055) , 2.4);
+	}
+}
+
+static int p2d_make_color_correction_tables(PNGDIB *p2d)
+{
+	int n;
+	double val_src;
+	double val_linear;
+	double val_dst;
+	double val;
+
+	p2d->src_to_linear_table = (double*)malloc(256*sizeof(double));
+	if(!p2d->src_to_linear_table) return 0;
+	p2d->linear_to_srgb_table = (unsigned char*)malloc(256*sizeof(unsigned char));
+	if(!p2d->linear_to_srgb_table) return 0;
+	p2d->src_to_dst_table = (unsigned char*)malloc(256*sizeof(unsigned char));
+	if(!p2d->src_to_dst_table) return 0;
+
+	for(n=0;n<256;n++) {
+		val_src = ((double)n)/255.0;
+
+		if(p2d->color_correction_enabled) {
+			if(p2d->color_correction_type==P2D_CC_SRGB) {
+				val_linear = srgb_to_linear_sample(val_src);
+			}
+			else if(p2d->color_correction_type==P2D_CC_GAMMA) {
+				val_linear =  gamma_to_linear_sample(val_src,1.0/p2d->file_gamma);
+			}
+			else {
+				val_linear = val_src;
+			}
+
+			// TODO: This is only needed if there is partial transparency.
+			p2d->src_to_linear_table[n] = val_linear;
+			
+			val_dst = linear_to_srgb_sample(val_linear);
+			p2d->src_to_dst_table[n] = (unsigned char)(0.5+val_dst*255.0);
+
+			// TODO: This doesn't need to be recalculated every time.
+			val = linear_to_srgb_sample(val_src);
+			p2d->linear_to_srgb_table[n] = (unsigned char)(0.5+val*255.0);
+		}
+		else {
+			// "dummy" tables
+			p2d->src_to_linear_table[n] = val_src;
+			p2d->src_to_dst_table[n] = n;
+			p2d->linear_to_srgb_table[n] = n;
+		}
+	}
+	return 1;
+}
+
+// Handle cases where the PNG image can be read directly into the DIB image
+// buffer.
+static int decode_strategy_1_8bit_direct(PNGDIB *p2d, int samples_per_pixel)
+{
+	size_t i, j;
+	int samples_per_row;
+
+	if(samples_per_pixel==3) {
+		png_set_bgr(p2d->png_ptr);
+	}
+
+	png_read_image(p2d->png_ptr, p2d->dib_row_pointers);
+
+	// With no transparency, sRGB source images don't need color correction.
+	if(p2d->color_correction_type == P2D_CC_GAMMA) {
+		samples_per_row = samples_per_pixel*p2d->width;
+
+		for(j=0;j<p2d->height;j++) {
+			for(i=0;i<samples_per_row;i++) {
+				p2d->dib_row_pointers[j][i] = p2d->src_to_dst_table[p2d->dib_row_pointers[j][i]];
+			}
+		}
+	}
+	return 1;
+}
+
+static int decode_strategy_2_rgba(PNGDIB *p2d)
+{
+	size_t i, j;
+	unsigned char *pngimage = NULL;
+	unsigned char **pngrowpointers = NULL;
+	double r,g,b,a;
+	double r_b,g_b,b_b; // composited with background color
+
+	pngimage = (unsigned char*)malloc(4*p2d->width*p2d->height);
+	if(!pngimage) goto done;
+	pngrowpointers = (unsigned char**)malloc(p2d->height*sizeof(unsigned char*));
+	if(!pngrowpointers) goto done;
+	for(j=0;j<p2d->height;j++) {
+		pngrowpointers[j] = &pngimage[j*4*p2d->width];
+	}
+
+	png_read_image(p2d->png_ptr, pngrowpointers);
+
+	for(j=0;j<p2d->height;j++) {
+		for(i=0;i<p2d->width;i++) {
+			r = src255_to_linear_sample(p2d,pngrowpointers[j][i*4+0]);
+			g = src255_to_linear_sample(p2d,pngrowpointers[j][i*4+1]);
+			b = src255_to_linear_sample(p2d,pngrowpointers[j][i*4+2]);
+			a = ((double)pngrowpointers[j][i*4+3])/255.0;
+
+			r_b  = a*r + (1.0-a)*p2d->bkgd_color_applied_linear.red;
+			g_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.green;
+			b_b  = a*b + (1.0-a)*p2d->bkgd_color_applied_linear.blue;
+
+			// TODO: This is not perfect.
+			// Instead of quantizing to the nearest linear color and then converting it to sRGB,
+			// we should use the quantized sRGB color that is nearest in a linear
+			// colorspace. There's no easy and efficient way to do that, though.
+			p2d->dib_row_pointers[j][i*3+0] = p2d->linear_to_srgb_table[(unsigned char)(0.5+b_b*255.0)];
+			p2d->dib_row_pointers[j][i*3+1] = p2d->linear_to_srgb_table[(unsigned char)(0.5+g_b*255.0)];
+			p2d->dib_row_pointers[j][i*3+2] = p2d->linear_to_srgb_table[(unsigned char)(0.5+r_b*255.0)];
+		}
+	}
+
+done:
+	if(pngimage) free(pngimage);
+	if(pngrowpointers) free(pngrowpointers);
+	return 1;
+}
+
+// gray+alpha
+static int decode_strategy_3_graya(PNGDIB *p2d, int tocolor)
+{
+	size_t i, j;
+	unsigned char *pngimage = NULL;
+	unsigned char **pngrowpointers = NULL;
+	double g,a;
+	double r_b,g_b,b_b; // composited with background color (g_b is gray or green)
+
+	pngimage = (unsigned char*)malloc(2*p2d->width*p2d->height);
+	if(!pngimage) goto done;
+	pngrowpointers = (unsigned char**)malloc(p2d->height*sizeof(unsigned char*));
+	if(!pngrowpointers) goto done;
+	for(j=0;j<p2d->height;j++) {
+		pngrowpointers[j] = &pngimage[j*2*p2d->width];
+	}
+
+	png_read_image(p2d->png_ptr, pngrowpointers);
+
+	for(j=0;j<p2d->height;j++) {
+		for(i=0;i<p2d->width;i++) {
+			g = src255_to_linear_sample(p2d,pngrowpointers[j][i*2]);
+			a = ((double)pngrowpointers[j][i*2+1])/255.0;
+
+			if(tocolor) {
+				r_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.red;
+				g_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.green;
+				b_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.blue;
+				p2d->dib_row_pointers[j][i*3+0] = p2d->linear_to_srgb_table[(unsigned char)(0.5+b_b*255.0)];
+				p2d->dib_row_pointers[j][i*3+1] = p2d->linear_to_srgb_table[(unsigned char)(0.5+g_b*255.0)];
+				p2d->dib_row_pointers[j][i*3+2] = p2d->linear_to_srgb_table[(unsigned char)(0.5+r_b*255.0)];
+			}
+			else {
+				g_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.red;
+				p2d->dib_row_pointers[j][i] = p2d->linear_to_srgb_table[(unsigned char)(0.5+g_b*255.0)];
+			}
+		}
+	}
+
+done:
+	if(pngimage) free(pngimage);
+	if(pngrowpointers) free(pngrowpointers);
+	return 1;
+}
 
 int pngdib_p2d_run(PNGDIB *p2d)
 {
-	png_structp png_ptr;
-	png_infop info_ptr;
 	jmp_buf jbuf;
 	struct errstruct errinfo;
-	png_uint_32 width, height;
 	int interlace_type;
-	unsigned char **row_pointers;
 	unsigned char *lpdib;
 	unsigned char *dib_palette;
 	unsigned char *dib_bits;
@@ -403,27 +510,46 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	int j;
 	int retval;
 	size_t palette_offs;
+	int decode_strategy;
+	int strategy_spp=0;
+	int strategy_tocolor=0;
+	int bg_is_gray;
 
 	p2d->manual_trns=0;
-	p2d->has_trns=p2d->has_bkgd=0;
+	p2d->has_trns=0;
 	retval=PNGD_E_ERROR;
-	png_ptr=NULL;
-	info_ptr=NULL;
-	row_pointers=NULL;
+	p2d->png_ptr=NULL;
+	p2d->info_ptr=NULL;
+	p2d->dib_row_pointers=NULL;
 	lpdib=NULL;
+	decode_strategy=0;
 
 	StringCchCopy(p2d->errmsg,PNGDIB_ERRMSG_MAX,_T(""));
 
+
 	if(p2d->use_custom_bg_flag) {
-		p2d->bkgd_color.red=   p2d->bgcolor.red;
-		p2d->bkgd_color.green= p2d->bgcolor.green;
-		p2d->bkgd_color.blue=  p2d->bgcolor.blue;
+		p2d->bkgd_color_applied_srgb = p2d->bkgd_color_custom_srgb; // struct copy
+		p2d->bkgd_color_applied_flag = 1;
 	}
 	else {
-		p2d->bkgd_color.red=   255; // Should never get used. If the
-		p2d->bkgd_color.green= 128; // background turns orange, it's a bug.
-		p2d->bkgd_color.blue=  0;
+		p2d->bkgd_color_applied_srgb.red   = 255; // Should never get used. If the
+		p2d->bkgd_color_applied_srgb.green = 128; // background turns orange, it's a bug.
+		p2d->bkgd_color_applied_srgb.blue  =  0;
 	}
+
+	if(p2d->color_correction_enabled) {
+		// Also store the custom background color in a linear colorspace, since that's
+		// what we'll need if we have to apply it to the image.
+		p2d->bkgd_color_applied_linear.red   = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.red)/255.0);
+		p2d->bkgd_color_applied_linear.green = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.green)/255.0);
+		p2d->bkgd_color_applied_linear.blue  = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.blue)/255.0);
+	}
+	else {
+		p2d->bkgd_color_applied_linear.red   = ((double)p2d->bkgd_color_applied_srgb.red)/255.0;
+		p2d->bkgd_color_applied_linear.green = ((double)p2d->bkgd_color_applied_srgb.green)/255.0;
+		p2d->bkgd_color_applied_linear.blue  = ((double)p2d->bkgd_color_applied_srgb.blue)/255.0;
+	}
+
 
 	// Set the user-defined pointer to point to our jmp_buf. This will
 	// hopefully protect against potentially different sized jmp_buf's in
@@ -431,26 +557,26 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	errinfo.jbufp = &jbuf;
 	errinfo.errmsg = p2d->errmsg;
 
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,(void*)(&errinfo),
+	p2d->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,(void*)(&errinfo),
 		my_png_error_fn, my_png_warning_fn);
-	if(!png_ptr) { retval=PNGD_E_NOMEM; goto done; }
+	if(!p2d->png_ptr) { retval=PNGD_E_NOMEM; goto done; }
 
-	png_set_user_limits(png_ptr,100000,100000); // max image dimensions
+	png_set_user_limits(p2d->png_ptr,100000,100000); // max image dimensions
 
 #if PNG_LIBPNG_VER >= 10400
 	// Number of ancillary chunks stored.
 	// I don't think we need any of these, but there appears to be no
 	// way to set the limit to 0. (0 is reserved to mean "unlimited".)
 	// I'll just set it to an arbitrary low number.
-	png_set_chunk_cache_max(png_ptr,50);
+	png_set_chunk_cache_max(p2d->png_ptr,50);
 #endif
 
 #if PNG_LIBPNG_VER >= 10401
-	png_set_chunk_malloc_max(png_ptr,1000000);
+	png_set_chunk_malloc_max(p2d->png_ptr,1000000);
 #endif
 
-	info_ptr = png_create_info_struct(png_ptr);
-	if(!info_ptr) {
+	p2d->info_ptr = png_create_info_struct(p2d->png_ptr);
+	if(!p2d->info_ptr) {
 		//png_destroy_read_struct(&png_ptr, (png_infopp)NULL, (png_infopp)NULL);
 		retval=PNGD_E_NOMEM; goto done;
 	}
@@ -463,78 +589,172 @@ int pngdib_p2d_run(PNGDIB *p2d)
 		goto done;
 	}
 
-	png_set_read_fn(png_ptr, (void*)p2d, my_png_read_fn_custom);
+	png_set_read_fn(p2d->png_ptr, (void*)p2d, my_png_read_fn_custom);
 
-	png_read_info(png_ptr, info_ptr);
+	png_read_info(p2d->png_ptr, p2d->info_ptr);
 
-	png_get_IHDR(png_ptr, info_ptr, &width, &height, &p2d->pngf_bit_depth, &p2d->color_type,
+	png_get_IHDR(p2d->png_ptr, p2d->info_ptr, &p2d->width, &p2d->height, &p2d->pngf_bit_depth, &p2d->color_type,
 		&interlace_type, NULL, NULL);
 
 	p2d->is_grayscale = !(p2d->color_type&PNG_COLOR_MASK_COLOR);
-	p2d->has_alpha_channel = (p2d->color_type&PNG_COLOR_MASK_ALPHA)?1:0;
 
-	p2d->has_trns = png_get_valid(png_ptr,info_ptr,PNG_INFO_tRNS);
+	p2d->has_trns = png_get_valid(p2d->png_ptr,p2d->info_ptr,PNG_INFO_tRNS);
 
-	//////// BACKGROUND stuff
+	p2d_read_gamma(p2d);
 
-	p2d_handle_background(p2d,png_ptr,info_ptr);
-	////////
+	if(!p2d_make_color_correction_tables(p2d)) goto done;
 
-	// If we don't have any background color at all that we can use,
-	// strip the alpha channel.
-	if(p2d->has_alpha_channel && !p2d->has_bkgd && 
-		!(p2d->use_custom_bg_flag) )
-	{
-		png_set_strip_alpha(png_ptr);
-	}
+	p2d_read_bgcolor(p2d);
 
-	if(p2d->pngf_bit_depth>8)
-		png_set_strip_16(png_ptr);
-
-	p2d_handle_gamma(p2d,png_ptr,info_ptr);
-
-	png_read_update_info(png_ptr, info_ptr);
-
-	// color type may have changed, due to our transformations
-	p2d->color_type = png_get_color_type(png_ptr,info_ptr);
+	p2d_read_density(p2d);
 
 
 	//////// Decide on DIB image type, etc.
 
-	switch(p2d->color_type) {
-	case PNG_COLOR_TYPE_RGB:
-		dib_bpp= 24;
+	// This is inevitably a complicated part of the code, because we have to
+	// cover a lot of different cases, which overlap in various ways.
+
+	// TODO: In some cases this uses libpng to inefficiently convert to a
+	// different image type (e.g. palette to RGB), to reduce the number of cases
+	// we need to handle. This is intended to be temporary: more algorithms
+	// will be added later to make it more efficient.
+
+	if(p2d->color_type==PNG_COLOR_TYPE_GRAY && !p2d->has_trns) {
+		// TODO: It might be better to gamma-correct the palette, instead of the image.
+		decode_strategy=1; strategy_spp=1;
+		dib_bpp=8;
+		p2d->need_gray_palette=1; p2d->palette_entries=256;
+		if(p2d->pngf_bit_depth<8) {
+			// TODO: Don't do this.
+			png_set_expand_gray_1_2_4_to_8(p2d->png_ptr);
+		}
+		else if(p2d->pngf_bit_depth==16) {
+			png_set_strip_16(p2d->png_ptr);
+		}
+	}
+	else if(p2d->color_type==PNG_COLOR_TYPE_GRAY_ALPHA || (p2d->color_type==PNG_COLOR_TYPE_GRAY && p2d->has_trns) ) {
+
+		// Figure out if the background color is a shade of gray
+		bg_is_gray=1;
+		if(p2d->bkgd_color_applied_flag) {
+			if(p2d->bkgd_color_applied_srgb.red!=p2d->bkgd_color_applied_srgb.green ||
+				p2d->bkgd_color_applied_srgb.red!=p2d->bkgd_color_applied_srgb.blue)
+			{
+				bg_is_gray=0;
+			}
+		}
+
+		if(p2d->bkgd_color_applied_flag && bg_is_gray) {
+			// Applying a gray background.
+			decode_strategy=3; strategy_tocolor=0;
+			dib_bpp=8;
+			p2d->need_gray_palette=1; p2d->palette_entries=256;
+		}
+		else if(p2d->bkgd_color_applied_flag && !bg_is_gray) {
+			// Applying a color background to a grayscale image.
+			decode_strategy=3; strategy_tocolor=1;
+			dib_bpp=24;
+			p2d->palette_entries=0;
+		}
+		else if(!p2d->bkgd_color_applied_flag) {
+			// Strip the alpha channel.
+			decode_strategy=1; strategy_spp=1;
+			dib_bpp=8;
+			p2d->need_gray_palette=1; p2d->palette_entries=256;
+			png_set_strip_alpha(p2d->png_ptr);
+		}
+
+		if(p2d->color_type==PNG_COLOR_TYPE_GRAY) {
+			// TODO: Don't do this.
+			png_set_tRNS_to_alpha(p2d->png_ptr);
+		}
+
+		if(p2d->pngf_bit_depth<8) {
+			// TODO: Don't do this.
+			png_set_expand_gray_1_2_4_to_8(p2d->png_ptr);
+		}
+		else if(p2d->pngf_bit_depth==16) {
+			png_set_strip_16(p2d->png_ptr);
+		}
+	}
+	else if(p2d->color_type==PNG_COLOR_TYPE_RGB && !p2d->has_trns) {
+		decode_strategy=1; strategy_spp=3;
+		dib_bpp=24;
 		p2d->palette_entries=0;
-		png_set_bgr(png_ptr);
-		break;
-	case PNG_COLOR_TYPE_PALETTE:
-		dib_bpp=p2d->pngf_bit_depth;
-		png_get_PLTE(png_ptr,info_ptr,&p2d->pngf_palette,&p2d->palette_entries);
-		break;
-	case PNG_COLOR_TYPE_GRAY:
-	case PNG_COLOR_TYPE_GRAY_ALPHA:
-		dib_bpp=p2d->pngf_bit_depth;
-		if(p2d->pngf_bit_depth>8) dib_bpp=8;
-		p2d->palette_entries= 1<<dib_bpp;
-		// we'll construct a grayscale palette later
-		break;
-	default:
-		retval=PNGD_E_BADPNG;
+		if(p2d->pngf_bit_depth==16) {
+			png_set_strip_16(p2d->png_ptr);
+		}
+	}
+	else if(p2d->color_type==PNG_COLOR_TYPE_RGB && p2d->has_trns) {
+		// RGB with binary transparency.
+
+		dib_bpp=24;
+		p2d->palette_entries=0;
+
+		if(p2d->bkgd_color_applied_flag) {
+			decode_strategy=2;
+			if(p2d->pngf_bit_depth==16) {
+				png_set_strip_16(p2d->png_ptr);
+			}
+			// TODO: We could handle transparency ourselves, more efficiently,
+			// without promoting it to a whole alpha channel.
+			png_set_tRNS_to_alpha(p2d->png_ptr);
+		}
+		else {
+			// Transparency disabled; just ignore the trns chunk.
+			decode_strategy=1; strategy_spp=3;
+			if(p2d->pngf_bit_depth==16) {
+				png_set_strip_16(p2d->png_ptr);
+			}
+		}
+	}
+	else if(p2d->color_type==PNG_COLOR_TYPE_RGB_ALPHA) {
+		if(p2d->bkgd_color_applied_flag) {
+			decode_strategy=2;
+		}
+		else {
+			// No background color to use, so strip the alpha channel.
+			decode_strategy=1; strategy_spp=3;
+			png_set_strip_alpha(p2d->png_ptr);
+		}
+		dib_bpp=24;
+		p2d->palette_entries=0;
+		if(p2d->pngf_bit_depth==16) {
+			png_set_strip_16(p2d->png_ptr);
+		}
+	}
+	else if(p2d->color_type==PNG_COLOR_TYPE_PALETTE) {
+
+		dib_bpp=24;
+		p2d->palette_entries=0;
+
+		// TODO: Don't do this.
+		png_set_palette_to_rgb(p2d->png_ptr);
+
+		if(p2d->has_trns && p2d->bkgd_color_applied_flag) {
+			decode_strategy=2;
+			// TODO: Don't do this.
+			png_set_tRNS_to_alpha(p2d->png_ptr);
+		}
+		else {
+			decode_strategy=1; strategy_spp=3;
+			png_set_strip_alpha(p2d->png_ptr);
+		}
+
+	}
+
+	if(decode_strategy==0) {
+		StringCchPrintf(p2d->errmsg,PNGDIB_ERRMSG_MAX,_T("Viewer doesn't support this image type"));
 		goto done;
 	}
 
-	if(dib_bpp==2) dib_bpp=4;
-
-	//////// Read the image density
-
-	p2d_read_density(p2d,png_ptr,info_ptr);
 
 	//////// Calculate the size of the DIB, and allocate memory for it.
 
 	// DIB scanlines are padded to 4-byte boundaries.
-	dib_bytesperrow= (((width * dib_bpp)+31)/32)*4;
+	dib_bytesperrow= (((p2d->width * dib_bpp)+31)/32)*4;
 
-	p2d->bitssize = height*dib_bytesperrow;
+	p2d->bitssize = p2d->height*dib_bytesperrow;
 
 	p2d->dibsize=sizeof(BITMAPINFOHEADER) + 4*p2d->palette_entries + p2d->bitssize;
 
@@ -545,7 +765,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 
 	////////
 
-	// there is some redundancy here...
+	// TODO: Clean this up.
 	palette_offs=sizeof(BITMAPINFOHEADER);
 	p2d->bits_offs   =sizeof(BITMAPINFOHEADER) + 4*p2d->palette_entries;
 	dib_palette= &lpdib[palette_offs];
@@ -556,50 +776,52 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	//////// Copy the PNG palette to the DIB palette,
 	//////// or create the DIB palette.
 
-	p2d_read_or_create_palette(p2d,png_ptr,info_ptr);
+	p2d_read_or_create_palette(p2d);
 
 	//////// Allocate row_pointers, which point to each row in the DIB we allocated.
 
-	row_pointers=(unsigned char**)malloc(height*sizeof(unsigned char*));
-	if(!row_pointers) { retval=PNGD_E_NOMEM; goto done; }
+	p2d->dib_row_pointers=(unsigned char**)malloc(p2d->height*sizeof(unsigned char*));
+	if(!p2d->dib_row_pointers) { retval=PNGD_E_NOMEM; goto done; }
 
-	for(j=0;j<(int)height;j++) {
-		row_pointers[height-1-j]= &dib_bits[j*dib_bytesperrow];
+	for(j=0;j<(int)p2d->height;j++) {
+		p2d->dib_row_pointers[p2d->height-1-j]= &dib_bits[j*dib_bytesperrow];
 	}
 
 	//////// Read the PNG image into our DIB memory structure.
 
-	png_read_image(png_ptr, row_pointers);
+	switch(decode_strategy) {
+	case 1:
+		decode_strategy_1_8bit_direct(p2d,strategy_spp);
+		break;
+	case 2:
+		decode_strategy_2_rgba(p2d);
+		break;
+	case 3:
+		decode_strategy_3_graya(p2d,strategy_tocolor);
+		break;
+	}
 
-	////////
+	png_read_end(p2d->png_ptr, p2d->info_ptr);
 
-	// special handling for this bit depth, since it doesn't exist in DIBs
-	// expand 2bpp to 4bpp
+#if 0
+	// Special handling for this bit depth, since it doesn't exist in DIBs.
+	// Expand 2bpp to 4bpp
 	if(p2d->pngf_bit_depth==2) {
-		if(!p2d_convert_2bit_to_4bit(p2d,width,height,row_pointers)) {
+		if(!p2d_convert_2bit_to_4bit(p2d,width,height,p2d->dib_row_pointers)) {
 			retval=PNGD_E_NOMEM; goto done;
 		}
 	}
-
-	////////
-
-	free((void*)row_pointers);
-	row_pointers=NULL;
-
-	png_read_end(png_ptr, info_ptr);
-
-	png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp)NULL);
-	png_ptr=NULL;
+#endif
 
 	// fill in the DIB header fields
 	p2d->pdib->biSize=          sizeof(BITMAPINFOHEADER);
-	p2d->pdib->biWidth=         width;
-	p2d->pdib->biHeight=        height;
+	p2d->pdib->biWidth=         p2d->width;
+	p2d->pdib->biHeight=        p2d->height;
 	p2d->pdib->biPlanes=        1;
 	p2d->pdib->biBitCount=      dib_bpp;
 	p2d->pdib->biCompression=   BI_RGB;
 	// biSizeImage can also be 0 in uncompressed bitmaps
-	p2d->pdib->biSizeImage=     height*dib_bytesperrow;
+	p2d->pdib->biSizeImage=     p2d->height*dib_bytesperrow;
 
 	if(p2d->res_valid) {
 		p2d->pdib->biXPelsPerMeter= p2d->res_x;
@@ -613,28 +835,27 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	p2d->pdib->biClrUsed=       p2d->palette_entries;
 	p2d->pdib->biClrImportant=  0;
 
-	if(p2d->has_bkgd || (p2d->use_custom_bg_flag)) {
-		// return the background color if one was used
-		p2d->bgcolor.red   = p2d->bkgd_color.red;
-		p2d->bgcolor.green = p2d->bkgd_color.green;
-		p2d->bgcolor.blue  = p2d->bkgd_color.blue;
-		p2d->bgcolor_returned=1;
-	}
-
-	return PNGD_E_SUCCESS;
+	retval = PNGD_E_SUCCESS;
 
 done:
 
-	if(png_ptr) png_destroy_read_struct(&png_ptr, &info_ptr, (png_infopp)NULL);
-	if(row_pointers) free((void*)row_pointers);
-	if(lpdib) {
-		pngdib_p2d_free_dib((PNGDIB*)p2d,NULL);
-	}
+	if(p2d->src_to_dst_table) free(p2d->src_to_dst_table);
+	if(p2d->src_to_linear_table) free(p2d->src_to_linear_table);
+	if(p2d->linear_to_srgb_table) free(p2d->linear_to_srgb_table);
 
-	// If we don't have an error message yet, use a
-	// default one based on the code
-	if(!lstrlen(p2d->errmsg)) {
-		pngd_get_error_message(retval,p2d->errmsg,PNGDIB_ERRMSG_MAX);
+	if(p2d->png_ptr) png_destroy_read_struct(&p2d->png_ptr, &p2d->info_ptr, (png_infopp)NULL);
+	if(p2d->dib_row_pointers) free((void*)p2d->dib_row_pointers);
+
+	if(retval!=PNGD_E_SUCCESS) {
+		if(lpdib) {
+			pngdib_p2d_free_dib((PNGDIB*)p2d,NULL);
+		}
+
+		// If we don't have an error message yet, use a
+		// default one based on the code
+		if(!lstrlen(p2d->errmsg)) {
+			pngd_get_error_message(retval,p2d->errmsg,PNGDIB_ERRMSG_MAX);
+		}
 	}
 
 	return retval;
@@ -664,7 +885,6 @@ PNGDIB* pngdib_init(void)
 
 	p2d = (struct p2d_struct *)calloc(sizeof(struct p2d_struct),1);
 
-	// initialize common fields:
 	if(p2d) {
 		p2d->errmsg = (TCHAR*)calloc(PNGDIB_ERRMSG_MAX,sizeof(TCHAR));
 	}
@@ -707,19 +927,22 @@ void pngdib_p2d_set_use_file_bg(PNGDIB *p2d, int flag)
 	p2d->use_file_bg_flag = flag;
 }
 
+// Colors are given in sRGB color space.
 void pngdib_p2d_set_custom_bg(PNGDIB *p2d, unsigned char r,
 								  unsigned char g, unsigned char b)
 {
-	p2d->bgcolor.red = r;
-	p2d->bgcolor.green = g;
-	p2d->bgcolor.blue = b;
+	p2d->bkgd_color_custom_srgb.red = r;
+	p2d->bkgd_color_custom_srgb.green = g;
+	p2d->bkgd_color_custom_srgb.blue = b;
+	p2d->bkgd_color_custom_linear.red   = srgb_to_linear_sample(((double)r)/255.0);
+	p2d->bkgd_color_custom_linear.green = srgb_to_linear_sample(((double)g)/255.0);
+	p2d->bkgd_color_custom_linear.blue  = srgb_to_linear_sample(((double)b)/255.0);
 	p2d->use_custom_bg_flag = 1;
 }
 
-void pngdib_p2d_set_gamma_correction(PNGDIB *p2d, int flag, double screen_gamma)
+void pngdib_p2d_enable_color_correction(PNGDIB *p2d, int flag)
 {
-	p2d->screen_gamma = screen_gamma;
-	p2d->gamma_correction = flag;
+	p2d->color_correction_enabled = flag;
 }
 
 int pngdib_p2d_get_dib(PNGDIB *p2d,
@@ -754,10 +977,10 @@ int pngdib_p2d_get_density(PNGDIB *p2d, int *pres_x, int *pres_y, int *pres_unit
 
 int pngdib_p2d_get_bgcolor(PNGDIB *p2d, unsigned char *pr, unsigned char *pg, unsigned char *pb)
 {
-	if(p2d->bgcolor_returned) {
-		*pr = p2d->bgcolor.red;
-		*pg = p2d->bgcolor.green;
-		*pb = p2d->bgcolor.blue;
+	if(p2d->bkgd_color_applied_flag) {
+		*pr = p2d->bkgd_color_applied_srgb.red;
+		*pg = p2d->bkgd_color_applied_srgb.green;
+		*pb = p2d->bkgd_color_applied_srgb.blue;
 		return 1;
 	}
 	return 0;

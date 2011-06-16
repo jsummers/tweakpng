@@ -223,7 +223,7 @@ void Viewer::Update(Png *png1)
 	read_ctx.png = png1;
 	pngdib_set_userdata(p2d,(void*)&read_ctx);
 
-	pngdib_p2d_set_gamma_correction(p2d, globals.use_gamma?1:0, PNGDIB_DEFAULT_SCREEN_GAMMA);
+	pngdib_p2d_enable_color_correction(p2d, globals.use_gamma?1:0);
 
 	pngdib_p2d_set_use_file_bg(p2d,globals.use_imagebg?1:0);
 	if(globals.use_custombg) {

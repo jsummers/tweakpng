@@ -1,8 +1,5 @@
 // pngtodib.h
 
-#define PNGDIB_DEFAULT_SCREEN_GAMMA   2.20000
-#define PNGDIB_DEFAULT_FILE_GAMMA     0.45455
-
 
 // error codes returned by pngdib_*_run()
 
@@ -23,7 +20,7 @@ void pngdib_p2d_set_png_read_fn(PNGDIB *p2d, pngdib_read_cb_type readfunc);
 void pngdib_p2d_set_use_file_bg(PNGDIB *p2d, int flag);
 void pngdib_p2d_set_custom_bg(PNGDIB *p2d, unsigned char r,
 								  unsigned char g, unsigned char b);
-void pngdib_p2d_set_gamma_correction(PNGDIB *p2d, int flag, double screen_gamma);
+void pngdib_p2d_enable_color_correction(PNGDIB *p2d, int flag);
 int  pngdib_p2d_run(PNGDIB *p2d);
 int  pngdib_p2d_get_dib(PNGDIB *p2d, BITMAPINFOHEADER **ppdib, int *pdibsize);
 int  pngdib_p2d_get_dibbits(PNGDIB *p2d, void **ppbits, int *pbitsoffset, int *pbitssize);
