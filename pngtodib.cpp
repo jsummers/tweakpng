@@ -91,7 +91,7 @@ struct p2d_struct {
 	int color_correction_type; // P2D_CC_*
 	double file_gamma; // Used if color_correction_type==P2D_CC_GAMMA
 
-	int palette_entries;
+	int pngf_palette_entries;
 	png_colorp pngf_palette;
 
 	unsigned char **dib_row_pointers;
@@ -100,6 +100,7 @@ struct p2d_struct {
 	unsigned char *src_to_dst_table;
 	unsigned char *linear_to_srgb_table;
 
+	int dib_palette_entries;
 	int need_gray_palette;
 };
 
@@ -275,40 +276,36 @@ static void p2d_read_or_create_palette(PNGDIB *p2d)
 	int i;
 
 	if(p2d->need_gray_palette) {
-		for(i=0;i<p2d->palette_entries;i++) {
+		for(i=0;i<p2d->dib_palette_entries;i++) {
 			p2d->palette[i].rgbRed   = i;
 			p2d->palette[i].rgbGreen = i;
 			p2d->palette[i].rgbBlue  = i;
 		}
 		return;
 	}
-
-	// TODO: Palette reading code will go here.
 }
 
-#if 0
-static int p2d_convert_2bit_to_4bit(PNGDIB *p2d, png_uint_32 width, png_uint_32 height,
-   unsigned char **row_pointers)
+// Expand 2bpp to 4bpp
+static int p2d_convert_2bit_to_4bit(PNGDIB *p2d)
 {
 	unsigned char *tmprow;
 	int i,j;
 
-	tmprow = (unsigned char*)malloc((width+3)/4 );
+	tmprow = (unsigned char*)malloc((p2d->width+3)/4 );
 	if(!tmprow) { return 0; }
 
-	for(j=0;j<(int)height;j++) {
-		CopyMemory(tmprow, row_pointers[j], (width+3)/4 );
-		ZeroMemory(row_pointers[j], (width+1)/2 );
+	for(j=0;j<(int)p2d->height;j++) {
+		CopyMemory(tmprow, p2d->dib_row_pointers[j], (p2d->width+3)/4 );
+		ZeroMemory(p2d->dib_row_pointers[j], (p2d->width+1)/2 );
 
-		for(i=0;i<(int)width;i++) {
-			row_pointers[j][i/2] |= 
+		for(i=0;i<(int)p2d->width;i++) {
+			p2d->dib_row_pointers[j][i/2] |= 
 				( ((tmprow[i/4] >> (2*(3-i%4)) ) & 0x03)<< (4*(1-i%2)) );
 		}
 	}
 	free((void*)tmprow);
 	return 1;
 }
-#endif
 
 static double gamma_to_linear_sample(double v, double gamma)
 {
@@ -384,7 +381,7 @@ static int p2d_make_color_correction_tables(PNGDIB *p2d)
 
 // Handle cases where the PNG image can be read directly into the DIB image
 // buffer.
-static int decode_strategy_1_8bit_direct(PNGDIB *p2d, int samples_per_pixel)
+static int decode_strategy_8bit_direct(PNGDIB *p2d, int samples_per_pixel)
 {
 	size_t i, j;
 	int samples_per_row;
@@ -408,7 +405,7 @@ static int decode_strategy_1_8bit_direct(PNGDIB *p2d, int samples_per_pixel)
 	return 1;
 }
 
-static int decode_strategy_2_rgba(PNGDIB *p2d)
+static int decode_strategy_rgba(PNGDIB *p2d)
 {
 	size_t i, j;
 	unsigned char *pngimage = NULL;
@@ -454,7 +451,7 @@ done:
 }
 
 // gray+alpha
-static int decode_strategy_3_graya(PNGDIB *p2d, int tocolor)
+static int decode_strategy_graya(PNGDIB *p2d, int tocolor)
 {
 	size_t i, j;
 	unsigned char *pngimage = NULL;
@@ -498,6 +495,57 @@ done:
 	return 1;
 }
 
+static int decode_strategy_palette(PNGDIB *p2d)
+{
+	int i;
+	int retval=0;
+	png_bytep trans_alpha;
+	png_color_16p trans_color;
+	int num_trans;
+	double sm[3];
+	double trns_alpha_1;
+
+	// Copy the PNG palette to the DIB palette
+	if(p2d->pngf_palette_entries != p2d->dib_palette_entries) return 0;
+
+	num_trans=0;
+	if(p2d->has_trns && p2d->bkgd_color_applied_flag) {
+		png_get_tRNS(p2d->png_ptr, p2d->info_ptr, &trans_alpha, &num_trans, &trans_color);
+	}
+	// Copy the PNG palette to the DIB palette, handling color correction
+	// and transparency in the process.
+	for(i=0;i<p2d->dib_palette_entries;i++) {
+		sm[0] = src255_to_linear_sample(p2d,p2d->pngf_palette[i].red);
+		sm[1] = src255_to_linear_sample(p2d,p2d->pngf_palette[i].green);
+		sm[2] = src255_to_linear_sample(p2d,p2d->pngf_palette[i].blue);
+
+		// Apply background color
+		if(i < num_trans) {
+			trns_alpha_1 = ((double)trans_alpha[i])/255.0;
+			sm[0] = trns_alpha_1*sm[0] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.red;
+			sm[1] = trns_alpha_1*sm[1] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.green;
+			sm[2] = trns_alpha_1*sm[2] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.blue;
+		}
+
+		p2d->palette[i].rgbRed   = p2d->linear_to_srgb_table[(unsigned char)(0.5+sm[0]*255.0)];
+		p2d->palette[i].rgbGreen = p2d->linear_to_srgb_table[(unsigned char)(0.5+sm[1]*255.0)];
+		p2d->palette[i].rgbBlue  = p2d->linear_to_srgb_table[(unsigned char)(0.5+sm[2]*255.0)];
+		p2d->palette[i].rgbReserved = 0;
+	}
+
+	// Directly read the image into the DIB.
+	png_read_image(p2d->png_ptr, p2d->dib_row_pointers);
+
+	if(p2d->pngf_bit_depth==2) {
+		// Special handling for this bit depth, since it doesn't exist in DIBs.
+		if(!p2d_convert_2bit_to_4bit(p2d)) goto done;
+	}
+
+	retval=1;
+done:
+	return retval;
+}
+
 int pngdib_p2d_run(PNGDIB *p2d)
 {
 	jmp_buf jbuf;
@@ -510,7 +558,9 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	int j;
 	int retval;
 	size_t palette_offs;
-	int decode_strategy;
+	enum p2d_strategy { P2D_ST_NONE, P2D_ST_8BIT_DIRECT, P2D_ST_RGBA, P2D_ST_GRAYA,
+	  P2D_ST_PALETTE };
+	enum p2d_strategy decode_strategy;
 	int strategy_spp=0;
 	int strategy_tocolor=0;
 	int bg_is_gray;
@@ -522,7 +572,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	p2d->info_ptr=NULL;
 	p2d->dib_row_pointers=NULL;
 	lpdib=NULL;
-	decode_strategy=0;
+	decode_strategy= P2D_ST_NONE;
 
 	StringCchCopy(p2d->errmsg,PNGDIB_ERRMSG_MAX,_T(""));
 
@@ -619,11 +669,13 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	// we need to handle. This is intended to be temporary: more algorithms
 	// will be added later to make it more efficient.
 
+	p2d->dib_palette_entries=0; // default
+
 	if(p2d->color_type==PNG_COLOR_TYPE_GRAY && !p2d->has_trns) {
 		// TODO: It might be better to gamma-correct the palette, instead of the image.
-		decode_strategy=1; strategy_spp=1;
+		decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=1;
 		dib_bpp=8;
-		p2d->need_gray_palette=1; p2d->palette_entries=256;
+		p2d->need_gray_palette=1; p2d->dib_palette_entries=256;
 		if(p2d->pngf_bit_depth<8) {
 			// TODO: Don't do this.
 			png_set_expand_gray_1_2_4_to_8(p2d->png_ptr);
@@ -646,21 +698,21 @@ int pngdib_p2d_run(PNGDIB *p2d)
 
 		if(p2d->bkgd_color_applied_flag && bg_is_gray) {
 			// Applying a gray background.
-			decode_strategy=3; strategy_tocolor=0;
+			decode_strategy=P2D_ST_GRAYA; strategy_tocolor=0;
 			dib_bpp=8;
-			p2d->need_gray_palette=1; p2d->palette_entries=256;
+			p2d->need_gray_palette=1; p2d->dib_palette_entries=256;
 		}
 		else if(p2d->bkgd_color_applied_flag && !bg_is_gray) {
 			// Applying a color background to a grayscale image.
-			decode_strategy=3; strategy_tocolor=1;
+			decode_strategy=P2D_ST_GRAYA; strategy_tocolor=1;
 			dib_bpp=24;
-			p2d->palette_entries=0;
+			//p2d->dib_palette_entries=0;
 		}
 		else if(!p2d->bkgd_color_applied_flag) {
 			// Strip the alpha channel.
-			decode_strategy=1; strategy_spp=1;
+			decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=1;
 			dib_bpp=8;
-			p2d->need_gray_palette=1; p2d->palette_entries=256;
+			p2d->need_gray_palette=1; p2d->dib_palette_entries=256;
 			png_set_strip_alpha(p2d->png_ptr);
 		}
 
@@ -678,9 +730,8 @@ int pngdib_p2d_run(PNGDIB *p2d)
 		}
 	}
 	else if(p2d->color_type==PNG_COLOR_TYPE_RGB && !p2d->has_trns) {
-		decode_strategy=1; strategy_spp=3;
+		decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=3;
 		dib_bpp=24;
-		p2d->palette_entries=0;
 		if(p2d->pngf_bit_depth==16) {
 			png_set_strip_16(p2d->png_ptr);
 		}
@@ -689,10 +740,9 @@ int pngdib_p2d_run(PNGDIB *p2d)
 		// RGB with binary transparency.
 
 		dib_bpp=24;
-		p2d->palette_entries=0;
 
 		if(p2d->bkgd_color_applied_flag) {
-			decode_strategy=2;
+			decode_strategy=P2D_ST_RGBA;
 			if(p2d->pngf_bit_depth==16) {
 				png_set_strip_16(p2d->png_ptr);
 			}
@@ -702,7 +752,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 		}
 		else {
 			// Transparency disabled; just ignore the trns chunk.
-			decode_strategy=1; strategy_spp=3;
+			decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=3;
 			if(p2d->pngf_bit_depth==16) {
 				png_set_strip_16(p2d->png_ptr);
 			}
@@ -710,40 +760,31 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	}
 	else if(p2d->color_type==PNG_COLOR_TYPE_RGB_ALPHA) {
 		if(p2d->bkgd_color_applied_flag) {
-			decode_strategy=2;
+			decode_strategy=P2D_ST_RGBA;
 		}
 		else {
 			// No background color to use, so strip the alpha channel.
-			decode_strategy=1; strategy_spp=3;
+			decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=3;
 			png_set_strip_alpha(p2d->png_ptr);
 		}
 		dib_bpp=24;
-		p2d->palette_entries=0;
 		if(p2d->pngf_bit_depth==16) {
 			png_set_strip_16(p2d->png_ptr);
 		}
 	}
 	else if(p2d->color_type==PNG_COLOR_TYPE_PALETTE) {
-
-		dib_bpp=24;
-		p2d->palette_entries=0;
-
-		// TODO: Don't do this.
-		png_set_palette_to_rgb(p2d->png_ptr);
-
-		if(p2d->has_trns && p2d->bkgd_color_applied_flag) {
-			decode_strategy=2;
-			// TODO: Don't do this.
-			png_set_tRNS_to_alpha(p2d->png_ptr);
+		png_get_PLTE(p2d->png_ptr,p2d->info_ptr,&p2d->pngf_palette,&p2d->pngf_palette_entries);
+		p2d->dib_palette_entries = p2d->pngf_palette_entries;
+		if(p2d->pngf_bit_depth==2) {
+			dib_bpp=4;
 		}
 		else {
-			decode_strategy=1; strategy_spp=3;
-			png_set_strip_alpha(p2d->png_ptr);
+			dib_bpp=p2d->pngf_bit_depth;
 		}
-
+		decode_strategy=P2D_ST_PALETTE;
 	}
 
-	if(decode_strategy==0) {
+	if(decode_strategy==P2D_ST_NONE) {
 		StringCchPrintf(p2d->errmsg,PNGDIB_ERRMSG_MAX,_T("Viewer doesn't support this image type"));
 		goto done;
 	}
@@ -756,7 +797,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 
 	p2d->bitssize = p2d->height*dib_bytesperrow;
 
-	p2d->dibsize=sizeof(BITMAPINFOHEADER) + 4*p2d->palette_entries + p2d->bitssize;
+	p2d->dibsize=sizeof(BITMAPINFOHEADER) + 4*p2d->dib_palette_entries + p2d->bitssize;
 
 	lpdib = (unsigned char*)calloc(p2d->dibsize,1);
 
@@ -767,7 +808,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 
 	// TODO: Clean this up.
 	palette_offs=sizeof(BITMAPINFOHEADER);
-	p2d->bits_offs   =sizeof(BITMAPINFOHEADER) + 4*p2d->palette_entries;
+	p2d->bits_offs   =sizeof(BITMAPINFOHEADER) + 4*p2d->dib_palette_entries;
 	dib_palette= &lpdib[palette_offs];
 	p2d->palette= (RGBQUAD*)dib_palette;
 	dib_bits   = &lpdib[p2d->bits_offs];
@@ -790,28 +831,23 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	//////// Read the PNG image into our DIB memory structure.
 
 	switch(decode_strategy) {
-	case 1:
-		decode_strategy_1_8bit_direct(p2d,strategy_spp);
+	case P2D_ST_8BIT_DIRECT:
+		decode_strategy_8bit_direct(p2d,strategy_spp);
 		break;
-	case 2:
-		decode_strategy_2_rgba(p2d);
+	case P2D_ST_RGBA:
+		decode_strategy_rgba(p2d);
 		break;
-	case 3:
-		decode_strategy_3_graya(p2d,strategy_tocolor);
+	case P2D_ST_GRAYA:
+		decode_strategy_graya(p2d,strategy_tocolor);
 		break;
+	case P2D_ST_PALETTE:
+		decode_strategy_palette(p2d);
+		break;
+	default:
+		retval=PNGD_E_ERROR; goto done;
 	}
 
 	png_read_end(p2d->png_ptr, p2d->info_ptr);
-
-#if 0
-	// Special handling for this bit depth, since it doesn't exist in DIBs.
-	// Expand 2bpp to 4bpp
-	if(p2d->pngf_bit_depth==2) {
-		if(!p2d_convert_2bit_to_4bit(p2d,width,height,p2d->dib_row_pointers)) {
-			retval=PNGD_E_NOMEM; goto done;
-		}
-	}
-#endif
 
 	// fill in the DIB header fields
 	p2d->pdib->biSize=          sizeof(BITMAPINFOHEADER);
@@ -832,7 +868,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 		p2d->pdib->biYPelsPerMeter= 72;
 	}
 
-	p2d->pdib->biClrUsed=       p2d->palette_entries;
+	p2d->pdib->biClrUsed=       p2d->dib_palette_entries;
 	p2d->pdib->biClrImportant=  0;
 
 	retval = PNGD_E_SUCCESS;
