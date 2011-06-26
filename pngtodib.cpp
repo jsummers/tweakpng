@@ -32,7 +32,7 @@
 #include "pngtodib.h"
 #include <strsafe.h>
 
-#define PNGDIB_ERRMSG_MAX 200
+#define P2D_ERRMSG_MAX 200
 
 // Color correction methods
 #define P2D_CC_GAMMA 1
@@ -51,7 +51,7 @@ struct p2d_struct {
 	void *userdata;
 	TCHAR *errmsg;
 
-	pngdib_read_cb_type read_cb;
+	p2d_read_cb_type read_cb;
 
 	png_uint_32 width, height;
 
@@ -129,9 +129,9 @@ static void my_png_error_fn(png_structp png_ptr, const char *err_msg)
 	j = errinfop->jbufp;
 
 #ifdef _UNICODE
-	StringCchPrintf(errinfop->errmsg,PNGDIB_ERRMSG_MAX,_T("[libpng] %S"),err_msg);
+	StringCchPrintf(errinfop->errmsg,P2D_ERRMSG_MAX,_T("[libpng] %S"),err_msg);
 #else
-	StringCchPrintf(errinfop->errmsg,PNGDIB_ERRMSG_MAX,"[libpng] %s",err_msg);
+	StringCchPrintf(errinfop->errmsg,P2D_ERRMSG_MAX,"[libpng] %s",err_msg);
 #endif
 
 	longjmp(*j, -1);
@@ -161,7 +161,7 @@ static void my_png_read_fn_custom(png_structp png_ptr,
 }
 
 // Reads pHYs chunk, sets p2d->res_*.
-static void p2d_read_density(PNGDIB *p2d)
+static void p2d_read_density(P2D *p2d)
 {
 	int has_phys;
 	int res_unit_type;
@@ -179,7 +179,7 @@ static void p2d_read_density(PNGDIB *p2d)
 	p2d->res_valid=1;
 }
 
-static double src255_to_linear_sample(PNGDIB *p2d, p2d_byte sample)
+static double src255_to_linear_sample(P2D *p2d, p2d_byte sample)
 {
 	if(p2d->src_to_linear_table) {
 		return p2d->src_to_linear_table[sample];
@@ -187,7 +187,7 @@ static double src255_to_linear_sample(PNGDIB *p2d, p2d_byte sample)
 	return ((double)sample)/255.0;
 }
 
-static p2d_byte src255_to_srgb255_sample(PNGDIB *p2d, p2d_byte sample)
+static p2d_byte src255_to_srgb255_sample(P2D *p2d, p2d_byte sample)
 {
 	if(p2d->src_to_dst_table) {
 		return p2d->src_to_dst_table[sample];
@@ -195,7 +195,7 @@ static p2d_byte src255_to_srgb255_sample(PNGDIB *p2d, p2d_byte sample)
 	return sample;
 }
 
-static void p2d_read_bgcolor(PNGDIB *p2d)
+static void p2d_read_bgcolor(P2D *p2d)
 {
 	png_color_16p bg_colorp;
 	p2d_byte tmpcolor;
@@ -249,7 +249,7 @@ static void p2d_read_bgcolor(PNGDIB *p2d)
 	p2d->bkgd_color_applied_srgb.blue  = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.blue);
 }
 
-static void p2d_read_gamma(PNGDIB *p2d)
+static void p2d_read_gamma(P2D *p2d)
 {
 	int intent;
 
@@ -271,7 +271,7 @@ static void p2d_read_gamma(PNGDIB *p2d)
 	}
 }
 
-static void p2d_read_or_create_palette(PNGDIB *p2d)
+static void p2d_read_or_create_palette(P2D *p2d)
 {
 	int i;
 
@@ -286,7 +286,7 @@ static void p2d_read_or_create_palette(PNGDIB *p2d)
 }
 
 // Expand 2bpp to 4bpp
-static int p2d_convert_2bit_to_4bit(PNGDIB *p2d)
+static int p2d_convert_2bit_to_4bit(P2D *p2d)
 {
 	p2d_byte *tmprow;
 	int i,j;
@@ -330,7 +330,7 @@ static double srgb_to_linear_sample(double v_srgb)
 	}
 }
 
-static int p2d_make_color_correction_tables(PNGDIB *p2d)
+static int p2d_make_color_correction_tables(P2D *p2d)
 {
 	int n;
 	double val_src;
@@ -381,7 +381,7 @@ static int p2d_make_color_correction_tables(PNGDIB *p2d)
 
 // Handle cases where the PNG image can be read directly into the DIB image
 // buffer.
-static int decode_strategy_8bit_direct(PNGDIB *p2d, int samples_per_pixel)
+static int decode_strategy_8bit_direct(P2D *p2d, int samples_per_pixel)
 {
 	size_t i, j;
 	int samples_per_row;
@@ -405,7 +405,7 @@ static int decode_strategy_8bit_direct(PNGDIB *p2d, int samples_per_pixel)
 	return 1;
 }
 
-static int decode_strategy_rgba(PNGDIB *p2d)
+static int decode_strategy_rgba(P2D *p2d)
 {
 	size_t i, j;
 	p2d_byte *pngimage = NULL;
@@ -451,7 +451,7 @@ done:
 }
 
 // gray+alpha
-static int decode_strategy_graya(PNGDIB *p2d, int tocolor)
+static int decode_strategy_graya(P2D *p2d, int tocolor)
 {
 	size_t i, j;
 	p2d_byte *pngimage = NULL;
@@ -495,7 +495,7 @@ done:
 	return 1;
 }
 
-static int decode_strategy_palette(PNGDIB *p2d)
+static int decode_strategy_palette(P2D *p2d)
 {
 	int i;
 	int retval=0;
@@ -546,7 +546,7 @@ done:
 	return retval;
 }
 
-int pngdib_p2d_run(PNGDIB *p2d)
+int p2d_run(P2D *p2d)
 {
 	jmp_buf jbuf;
 	struct errstruct errinfo;
@@ -574,7 +574,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	lpdib=NULL;
 	decode_strategy= P2D_ST_NONE;
 
-	StringCchCopy(p2d->errmsg,PNGDIB_ERRMSG_MAX,_T(""));
+	StringCchCopy(p2d->errmsg,P2D_ERRMSG_MAX,_T(""));
 
 
 	if(p2d->use_custom_bg_flag) {
@@ -785,7 +785,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	}
 
 	if(decode_strategy==P2D_ST_NONE) {
-		StringCchPrintf(p2d->errmsg,PNGDIB_ERRMSG_MAX,_T("Viewer doesn't support this image type"));
+		StringCchPrintf(p2d->errmsg,P2D_ERRMSG_MAX,_T("Viewer doesn't support this image type"));
 		goto done;
 	}
 
@@ -884,20 +884,20 @@ done:
 
 	if(retval!=PNGD_E_SUCCESS) {
 		if(lpdib) {
-			pngdib_p2d_free_dib((PNGDIB*)p2d,NULL);
+			p2d_free_dib(p2d,NULL);
 		}
 
 		// If we don't have an error message yet, use a
 		// default one based on the code
 		if(!lstrlen(p2d->errmsg)) {
-			pngd_get_error_message(retval,p2d->errmsg,PNGDIB_ERRMSG_MAX);
+			pngd_get_error_message(retval,p2d->errmsg,P2D_ERRMSG_MAX);
 		}
 	}
 
 	return retval;
 }
 
-void pngdib_p2d_free_dib(PNGDIB *p2d, BITMAPINFOHEADER* pdib)
+void p2d_free_dib(P2D *p2d, BITMAPINFOHEADER* pdib)
 {
 	if(!p2d) {
 		if(pdib) free((void*)pdib);
@@ -905,7 +905,7 @@ void pngdib_p2d_free_dib(PNGDIB *p2d, BITMAPINFOHEADER* pdib)
 	}
 
 	if(!pdib) {
-		// DIB not explicitly given; use the one from the PNGDIB object.
+		// DIB not explicitly given; use the one from the P2D object.
 		// (this is the normal case)
 		pdib = p2d->pdib;
 		p2d->pdib = NULL;
@@ -915,20 +915,20 @@ void pngdib_p2d_free_dib(PNGDIB *p2d, BITMAPINFOHEADER* pdib)
 	}
 }
 
-PNGDIB* pngdib_init(void)
+P2D* p2d_init(void)
 {
 	struct p2d_struct *p2d;
 
 	p2d = (struct p2d_struct *)calloc(sizeof(struct p2d_struct),1);
 
 	if(p2d) {
-		p2d->errmsg = (TCHAR*)calloc(PNGDIB_ERRMSG_MAX,sizeof(TCHAR));
+		p2d->errmsg = (TCHAR*)calloc(P2D_ERRMSG_MAX,sizeof(TCHAR));
 	}
 
 	return p2d;
 }
 
-int pngdib_done(PNGDIB *p2d)
+int p2d_done(P2D *p2d)
 {
 	if(!p2d) return 0;
 
@@ -938,33 +938,33 @@ int pngdib_done(PNGDIB *p2d)
 	return 1;
 }
 
-TCHAR* pngdib_get_error_msg(PNGDIB *p2d)
+TCHAR* p2d_get_error_msg(P2D *p2d)
 {
 	return p2d->errmsg;
 }
 
-void pngdib_set_userdata(PNGDIB* p2d, void* userdata)
+void p2d_set_userdata(P2D* p2d, void* userdata)
 {
 	p2d->userdata = userdata;
 }
 
-void* pngdib_get_userdata(PNGDIB* p2d)
+void* p2d_get_userdata(P2D* p2d)
 {
 	return p2d->userdata;
 }
 
-void pngdib_p2d_set_png_read_fn(PNGDIB *p2d, pngdib_read_cb_type readfunc)
+void p2d_set_png_read_fn(P2D *p2d, p2d_read_cb_type readfunc)
 {
 	p2d->read_cb = readfunc;
 }
 
-void pngdib_p2d_set_use_file_bg(PNGDIB *p2d, int flag)
+void p2d_set_use_file_bg(P2D *p2d, int flag)
 {
 	p2d->use_file_bg_flag = flag;
 }
 
 // Colors are given in sRGB color space.
-void pngdib_p2d_set_custom_bg(PNGDIB *p2d, p2d_byte r, p2d_byte g, p2d_byte b)
+void p2d_set_custom_bg(P2D *p2d, p2d_byte r, p2d_byte g, p2d_byte b)
 {
 	p2d->bkgd_color_custom_srgb.red = r;
 	p2d->bkgd_color_custom_srgb.green = g;
@@ -975,12 +975,12 @@ void pngdib_p2d_set_custom_bg(PNGDIB *p2d, p2d_byte r, p2d_byte g, p2d_byte b)
 	p2d->use_custom_bg_flag = 1;
 }
 
-void pngdib_p2d_enable_color_correction(PNGDIB *p2d, int flag)
+void p2d_enable_color_correction(P2D *p2d, int flag)
 {
 	p2d->color_correction_enabled = flag;
 }
 
-int pngdib_p2d_get_dib(PNGDIB *p2d,
+int p2d_get_dib(P2D *p2d,
    BITMAPINFOHEADER **ppdib, int *pdibsize)
 {
 	*ppdib = p2d->pdib;
@@ -988,7 +988,7 @@ int pngdib_p2d_get_dib(PNGDIB *p2d,
 	return 1;
 }	
 
-int pngdib_p2d_get_dibbits(PNGDIB *p2d, void **ppbits, int *pbitsoffset, int *pbitssize)
+int p2d_get_dibbits(P2D *p2d, void **ppbits, int *pbitsoffset, int *pbitssize)
 {
 	*ppbits = p2d->pbits;
 	if(pbitsoffset) *pbitsoffset = p2d->bits_offs;
@@ -996,7 +996,7 @@ int pngdib_p2d_get_dibbits(PNGDIB *p2d, void **ppbits, int *pbitsoffset, int *pb
 	return 1;
 }
 
-int pngdib_p2d_get_density(PNGDIB *p2d, int *pres_x, int *pres_y, int *pres_units)
+int p2d_get_density(P2D *p2d, int *pres_x, int *pres_y, int *pres_units)
 {
 	if(p2d->res_valid) {
 		*pres_x = p2d->res_x;
@@ -1010,7 +1010,7 @@ int pngdib_p2d_get_density(PNGDIB *p2d, int *pres_x, int *pres_y, int *pres_unit
 	return 0;
 }
 
-int pngdib_p2d_get_bgcolor(PNGDIB *p2d, p2d_byte *pr, p2d_byte *pg, p2d_byte *pb)
+int p2d_get_bgcolor(P2D *p2d, p2d_byte *pr, p2d_byte *pg, p2d_byte *pb)
 {
 	if(p2d->bkgd_color_applied_flag) {
 		*pr = p2d->bkgd_color_applied_srgb.red;
@@ -1021,7 +1021,7 @@ int pngdib_p2d_get_bgcolor(PNGDIB *p2d, p2d_byte *pr, p2d_byte *pg, p2d_byte *pb
 	return 0;
 }
 
-void pngdib_get_libpng_version(TCHAR *buf, int buflen)
+void p2d_get_libpng_version(TCHAR *buf, int buflen)
 {
 #ifdef UNICODE
 	StringCchPrintf(buf,buflen,_T("%S"),png_get_libpng_ver(NULL));

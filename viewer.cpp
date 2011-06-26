@@ -36,7 +36,7 @@ extern struct globals_struct globals;
 
 void twpng_get_libpng_version(TCHAR *buf, int buflen)
 {
-	pngdib_get_libpng_version(buf,buflen);
+	p2d_get_libpng_version(buf,buflen);
 }
 
 void Viewer::GlobalInit()
@@ -187,7 +187,7 @@ static int my_read_fn(void *userdata, void *buf, int len)
 // process image
 void Viewer::Update(Png *png1)
 {
-	PNGDIB *p2d;
+	P2D *p2d;
 	int rv;
 	int dens_x, dens_y, dens_units;
 	unsigned char tmpr,tmpg,tmpb;
@@ -215,34 +215,34 @@ void Viewer::Update(Png *png1)
 	hcur=SetCursor(LoadCursor(NULL,IDC_WAIT));
 	cursor_flag=1;
 
-	p2d = pngdib_init();
+	p2d = p2d_init();
 
 	png1->stream_file_start();
-	pngdib_p2d_set_png_read_fn(p2d,my_read_fn);
+	p2d_set_png_read_fn(p2d,my_read_fn);
 
 	read_ctx.png = png1;
-	pngdib_set_userdata(p2d,(void*)&read_ctx);
+	p2d_set_userdata(p2d,(void*)&read_ctx);
 
-	pngdib_p2d_enable_color_correction(p2d, globals.use_gamma?1:0);
+	p2d_enable_color_correction(p2d, globals.use_gamma?1:0);
 
-	pngdib_p2d_set_use_file_bg(p2d,globals.use_imagebg?1:0);
+	p2d_set_use_file_bg(p2d,globals.use_imagebg?1:0);
 	if(globals.use_custombg) {
-		pngdib_p2d_set_custom_bg(p2d,GetRValue(globals.custombgcolor),
+		p2d_set_custom_bg(p2d,GetRValue(globals.custombgcolor),
 			GetGValue(globals.custombgcolor),GetBValue(globals.custombgcolor));
 	}
 
-	rv=pngdib_p2d_run(p2d);
+	rv=p2d_run(p2d);
 	if(rv!=PNGD_E_SUCCESS) {
-		lstrcpyn(m_errormsg,pngdib_get_error_msg(p2d),200);
+		lstrcpyn(m_errormsg,p2d_get_error_msg(p2d),200);
 		m_errorflag=1;
 		goto abort;
 	}
-	rv=pngdib_p2d_get_dib(p2d,&m_dib,NULL);
-	rv=pngdib_p2d_get_dibbits(p2d, &m_bits, NULL, NULL);
+	rv=p2d_get_dib(p2d,&m_dib,NULL);
+	rv=p2d_get_dibbits(p2d, &m_bits, NULL, NULL);
 
 	m_adjwidth = m_dib->biWidth;
 	m_adjheight = m_dib->biHeight;
-	rv=pngdib_p2d_get_density(p2d, &dens_x, &dens_y, &dens_units);
+	rv=p2d_get_density(p2d, &dens_x, &dens_y, &dens_units);
 	if(rv) {
 		if(dens_x!=dens_y && dens_x>0 && dens_y>0 &&
 			10*dens_x>dens_y && 10*dens_y>dens_x)
@@ -259,13 +259,13 @@ void Viewer::Update(Png *png1)
 	CalcStretchedSize();
 
 	m_imghasbgcolor=0;
-	if(pngdib_p2d_get_bgcolor(p2d,&tmpr,&tmpg,&tmpb)) {
+	if(p2d_get_bgcolor(p2d,&tmpr,&tmpg,&tmpb)) {
 		m_imghasbgcolor=1;
 		m_imgbgcolor = RGB(tmpr,tmpg,tmpb);
 	}
 
 abort:
-	if(p2d) pngdib_done(p2d);
+	if(p2d) p2d_done(p2d);
 
 	if(m_hwndViewer) {
 		InvalidateRect(m_hwndViewer,NULL,TRUE);
@@ -277,7 +277,7 @@ abort:
 void Viewer::FreeImage()
 {
 	if(m_dib) {
-		pngdib_p2d_free_dib(NULL,m_dib);
+		p2d_free_dib(NULL,m_dib);
 		m_dib=NULL;
 		m_bits=NULL;
 		m_errorflag=0;
