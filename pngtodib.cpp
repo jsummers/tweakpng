@@ -38,6 +38,10 @@
 #define P2D_CC_GAMMA 1
 #define P2D_CC_SRGB  2
 
+struct p2d_globals_struct {
+	p2d_byte *linear_to_srgb_table;
+	p2d_byte *identity255_table;
+};
 
 struct PNGD_COLOR_struct {
 	p2d_byte red, green, blue, reserved;
@@ -49,6 +53,8 @@ struct PNGD_COLOR_fltpt_struct {
 
 struct p2d_struct {
 	void *userdata;
+	struct p2d_globals_struct *g; // Data that can be shared with multiple instances.
+
 	TCHAR *errmsg;
 
 	p2d_read_cb_type read_cb;
@@ -98,7 +104,7 @@ struct p2d_struct {
 
 	double *src_to_linear_table;
 	p2d_byte *src_to_dst_table;
-	p2d_byte *linear_to_srgb_table;
+	const p2d_byte *linear_to_srgb_table;
 
 	int dib_palette_entries;
 	int need_gray_palette;
@@ -330,18 +336,51 @@ static double srgb_to_linear_sample(double v_srgb)
 	}
 }
 
+static int p2d_make_global_tables(struct p2d_globals_struct *g)
+{
+	int n;
+	double val;
+
+	if(!g->linear_to_srgb_table) {
+		g->linear_to_srgb_table = (p2d_byte*)malloc(256*sizeof(p2d_byte));
+		if(!g->linear_to_srgb_table) return 0;
+
+		for(n=0;n<256;n++) {
+			val = linear_to_srgb_sample(((double)n)/255.0);
+			g->linear_to_srgb_table[n] = (p2d_byte)(0.5+val*255.0);
+		}
+	}
+
+	if(!g->identity255_table) {
+		g->identity255_table = (p2d_byte*)malloc(256*sizeof(p2d_byte));
+		if(!g->identity255_table) return 0;
+
+		for(n=0;n<256;n++) {
+			g->identity255_table[n] = n;
+		}
+	}
+	return 1;
+}
+
 static int p2d_make_color_correction_tables(P2D *p2d)
 {
 	int n;
 	double val_src;
 	double val_linear;
 	double val_dst;
-	double val;
+
+	// TODO: We should only make the tables that we'll actually use.
+	p2d_make_global_tables(p2d->g);
+	if(p2d->color_correction_enabled) {
+		p2d->linear_to_srgb_table = p2d->g->linear_to_srgb_table;
+	}
+	else {
+		p2d->linear_to_srgb_table = p2d->g->identity255_table;
+	}
 
 	p2d->src_to_linear_table = (double*)malloc(256*sizeof(double));
 	if(!p2d->src_to_linear_table) return 0;
-	p2d->linear_to_srgb_table = (p2d_byte*)malloc(256*sizeof(p2d_byte));
-	if(!p2d->linear_to_srgb_table) return 0;
+
 	p2d->src_to_dst_table = (p2d_byte*)malloc(256*sizeof(p2d_byte));
 	if(!p2d->src_to_dst_table) return 0;
 
@@ -364,16 +403,11 @@ static int p2d_make_color_correction_tables(P2D *p2d)
 			
 			val_dst = linear_to_srgb_sample(val_linear);
 			p2d->src_to_dst_table[n] = (p2d_byte)(0.5+val_dst*255.0);
-
-			// TODO: This doesn't need to be recalculated every time.
-			val = linear_to_srgb_sample(val_src);
-			p2d->linear_to_srgb_table[n] = (p2d_byte)(0.5+val*255.0);
 		}
 		else {
 			// "dummy" tables
 			p2d->src_to_linear_table[n] = val_src;
 			p2d->src_to_dst_table[n] = n;
-			p2d->linear_to_srgb_table[n] = n;
 		}
 	}
 	return 1;
@@ -877,7 +911,6 @@ done:
 
 	if(p2d->src_to_dst_table) free(p2d->src_to_dst_table);
 	if(p2d->src_to_linear_table) free(p2d->src_to_linear_table);
-	if(p2d->linear_to_srgb_table) free(p2d->linear_to_srgb_table);
 
 	if(p2d->png_ptr) png_destroy_read_struct(&p2d->png_ptr, &p2d->info_ptr, (png_infopp)NULL);
 	if(p2d->dib_row_pointers) free((void*)p2d->dib_row_pointers);
@@ -915,13 +948,15 @@ void p2d_free_dib(P2D *p2d, BITMAPINFOHEADER* pdib)
 	}
 }
 
-P2D* p2d_init(void)
+P2D* p2d_init(struct p2d_globals_struct *g)
 {
 	struct p2d_struct *p2d;
 
+	if(!g) return NULL;
 	p2d = (struct p2d_struct *)calloc(sizeof(struct p2d_struct),1);
 
 	if(p2d) {
+		p2d->g = g;
 		p2d->errmsg = (TCHAR*)calloc(P2D_ERRMSG_MAX,sizeof(TCHAR));
 	}
 
@@ -1028,6 +1063,22 @@ void p2d_get_libpng_version(TCHAR *buf, int buflen)
 #else
 	StringCchPrintf(buf,buflen,"%s",png_get_libpng_ver(NULL));
 #endif
+}
+
+struct p2d_globals_struct *p2d_create_globals(void)
+{
+	struct p2d_globals_struct *g;
+	g = (struct p2d_globals_struct *)calloc(1,sizeof(struct p2d_globals_struct));
+	return g;
+}
+
+void p2d_destroy_globals(struct p2d_globals_struct *g)
+{
+	if(g) {
+		if(g->linear_to_srgb_table) free((void*)g->linear_to_srgb_table);
+		if(g->identity255_table) free((void*)g->identity255_table);
+		free((void*)g);
+	}
 }
 
 #endif TWPNG_SUPPORT_VIEWER

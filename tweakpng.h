@@ -189,6 +189,8 @@ struct globals_struct {
 	DWORD crc_table[256];       // table of CRCs of all 8-bit messages
 
 	tools_t tools[TWPNG_NUMTOOLS];
+
+	void *viewer_p2d_globals; // Used by the viewer
 };
 
 
@@ -409,6 +411,7 @@ public:
 	~Viewer();
 
 	static void GlobalInit();
+	static void GlobalDestroy();
 	void Close();
 	void Update(Png *png); // Set png==NULL to clear viewer.
 	HWND m_hwndViewer;

@@ -1225,6 +1225,10 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdL
 			DispatchMessage(&msg);
 		}
 	}
+
+#ifdef TWPNG_SUPPORT_VIEWER
+	Viewer::GlobalDestroy();
+#endif
 	return (int)msg.wParam;
 }
 

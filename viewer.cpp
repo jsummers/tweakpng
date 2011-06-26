@@ -58,6 +58,13 @@ void Viewer::GlobalInit()
 	globals.viewer_imgpos_y=globals.vborder;
 }
 
+void Viewer::GlobalDestroy()
+{
+	if(globals.viewer_p2d_globals) {
+		p2d_destroy_globals((p2d_globals_struct*)globals.viewer_p2d_globals);
+		globals.viewer_p2d_globals=NULL;
+	}
+}
 
 // the constructor creates the window
 Viewer::Viewer(HWND parent)
@@ -187,7 +194,8 @@ static int my_read_fn(void *userdata, void *buf, int len)
 // process image
 void Viewer::Update(Png *png1)
 {
-	P2D *p2d;
+	struct p2d_globals_struct *p2dg = NULL;
+	P2D *p2d = NULL;
 	int rv;
 	int dens_x, dens_y, dens_units;
 	unsigned char tmpr,tmpg,tmpb;
@@ -196,7 +204,6 @@ void Viewer::Update(Png *png1)
 	struct viewer_read_ctx read_ctx;
 
 	m_errorflag=0;
-	p2d=NULL;
 	FreeImage();
 
 	if(!png1) goto abort;
@@ -215,7 +222,10 @@ void Viewer::Update(Png *png1)
 	hcur=SetCursor(LoadCursor(NULL,IDC_WAIT));
 	cursor_flag=1;
 
-	p2d = p2d_init();
+	if(!globals.viewer_p2d_globals) {
+		globals.viewer_p2d_globals = (void*)p2d_create_globals();
+	}
+	p2d = p2d_init((p2d_globals_struct*)globals.viewer_p2d_globals);
 
 	png1->stream_file_start();
 	p2d_set_png_read_fn(p2d,my_read_fn);
