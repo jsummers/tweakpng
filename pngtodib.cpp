@@ -40,7 +40,7 @@
 
 
 struct PNGD_COLOR_struct {
-	unsigned char red, green, blue, reserved;
+	p2d_byte red, green, blue, reserved;
 };
 
 struct PNGD_COLOR_fltpt_struct {
@@ -94,11 +94,11 @@ struct p2d_struct {
 	int pngf_palette_entries;
 	png_colorp pngf_palette;
 
-	unsigned char **dib_row_pointers;
+	p2d_byte **dib_row_pointers;
 
 	double *src_to_linear_table;
-	unsigned char *src_to_dst_table;
-	unsigned char *linear_to_srgb_table;
+	p2d_byte *src_to_dst_table;
+	p2d_byte *linear_to_srgb_table;
 
 	int dib_palette_entries;
 	int need_gray_palette;
@@ -179,7 +179,7 @@ static void p2d_read_density(PNGDIB *p2d)
 	p2d->res_valid=1;
 }
 
-static double src255_to_linear_sample(PNGDIB *p2d, unsigned char sample)
+static double src255_to_linear_sample(PNGDIB *p2d, p2d_byte sample)
 {
 	if(p2d->src_to_linear_table) {
 		return p2d->src_to_linear_table[sample];
@@ -187,7 +187,7 @@ static double src255_to_linear_sample(PNGDIB *p2d, unsigned char sample)
 	return ((double)sample)/255.0;
 }
 
-static unsigned char src255_to_srgb255_sample(PNGDIB *p2d, unsigned char sample)
+static p2d_byte src255_to_srgb255_sample(PNGDIB *p2d, p2d_byte sample)
 {
 	if(p2d->src_to_dst_table) {
 		return p2d->src_to_dst_table[sample];
@@ -198,7 +198,7 @@ static unsigned char src255_to_srgb255_sample(PNGDIB *p2d, unsigned char sample)
 static void p2d_read_bgcolor(PNGDIB *p2d)
 {
 	png_color_16p bg_colorp;
-	unsigned char tmpcolor;
+	p2d_byte tmpcolor;
 	int has_bkgd;
 
 	if(!p2d->use_file_bg_flag) {
@@ -213,28 +213,28 @@ static void p2d_read_bgcolor(PNGDIB *p2d)
 
 	if(p2d->is_grayscale) {
 		if(p2d->pngf_bit_depth<8) {
-			tmpcolor = (unsigned char) ( (bg_colorp->gray*255)/( (1<<p2d->pngf_bit_depth)-1 ) );
+			tmpcolor = (p2d_byte) ( (bg_colorp->gray*255)/( (1<<p2d->pngf_bit_depth)-1 ) );
 		}
 		else if(p2d->pngf_bit_depth==16) {
-			tmpcolor = (unsigned char)(bg_colorp->gray>>8);
+			tmpcolor = (p2d_byte)(bg_colorp->gray>>8);
 		}
 		else {
-			tmpcolor = (unsigned char)(bg_colorp->gray);
+			tmpcolor = (p2d_byte)(bg_colorp->gray);
 		}
 
 		p2d->bkgd_color_applied_src.red  = p2d->bkgd_color_applied_src.green = p2d->bkgd_color_applied_src.blue = tmpcolor;
 		p2d->bkgd_color_applied_flag = 1;
 	}
 	else if(p2d->pngf_bit_depth<=8) { // RGB[A]8 or palette
-		p2d->bkgd_color_applied_src.red  =(unsigned char)(bg_colorp->red);
-		p2d->bkgd_color_applied_src.green=(unsigned char)(bg_colorp->green);
-		p2d->bkgd_color_applied_src.blue =(unsigned char)(bg_colorp->blue);
+		p2d->bkgd_color_applied_src.red  =(p2d_byte)(bg_colorp->red);
+		p2d->bkgd_color_applied_src.green=(p2d_byte)(bg_colorp->green);
+		p2d->bkgd_color_applied_src.blue =(p2d_byte)(bg_colorp->blue);
 		p2d->bkgd_color_applied_flag = 1;
 	}
 	else {
-		p2d->bkgd_color_applied_src.red  =(unsigned char)(bg_colorp->red>>8);
-		p2d->bkgd_color_applied_src.green=(unsigned char)(bg_colorp->green>>8);
-		p2d->bkgd_color_applied_src.blue =(unsigned char)(bg_colorp->blue>>8);
+		p2d->bkgd_color_applied_src.red  =(p2d_byte)(bg_colorp->red>>8);
+		p2d->bkgd_color_applied_src.green=(p2d_byte)(bg_colorp->green>>8);
+		p2d->bkgd_color_applied_src.blue =(p2d_byte)(bg_colorp->blue>>8);
 		p2d->bkgd_color_applied_flag = 1;
 	}
 
@@ -288,10 +288,10 @@ static void p2d_read_or_create_palette(PNGDIB *p2d)
 // Expand 2bpp to 4bpp
 static int p2d_convert_2bit_to_4bit(PNGDIB *p2d)
 {
-	unsigned char *tmprow;
+	p2d_byte *tmprow;
 	int i,j;
 
-	tmprow = (unsigned char*)malloc((p2d->width+3)/4 );
+	tmprow = (p2d_byte*)malloc((p2d->width+3)/4 );
 	if(!tmprow) { return 0; }
 
 	for(j=0;j<(int)p2d->height;j++) {
@@ -340,9 +340,9 @@ static int p2d_make_color_correction_tables(PNGDIB *p2d)
 
 	p2d->src_to_linear_table = (double*)malloc(256*sizeof(double));
 	if(!p2d->src_to_linear_table) return 0;
-	p2d->linear_to_srgb_table = (unsigned char*)malloc(256*sizeof(unsigned char));
+	p2d->linear_to_srgb_table = (p2d_byte*)malloc(256*sizeof(p2d_byte));
 	if(!p2d->linear_to_srgb_table) return 0;
-	p2d->src_to_dst_table = (unsigned char*)malloc(256*sizeof(unsigned char));
+	p2d->src_to_dst_table = (p2d_byte*)malloc(256*sizeof(p2d_byte));
 	if(!p2d->src_to_dst_table) return 0;
 
 	for(n=0;n<256;n++) {
@@ -363,11 +363,11 @@ static int p2d_make_color_correction_tables(PNGDIB *p2d)
 			p2d->src_to_linear_table[n] = val_linear;
 			
 			val_dst = linear_to_srgb_sample(val_linear);
-			p2d->src_to_dst_table[n] = (unsigned char)(0.5+val_dst*255.0);
+			p2d->src_to_dst_table[n] = (p2d_byte)(0.5+val_dst*255.0);
 
 			// TODO: This doesn't need to be recalculated every time.
 			val = linear_to_srgb_sample(val_src);
-			p2d->linear_to_srgb_table[n] = (unsigned char)(0.5+val*255.0);
+			p2d->linear_to_srgb_table[n] = (p2d_byte)(0.5+val*255.0);
 		}
 		else {
 			// "dummy" tables
@@ -408,14 +408,14 @@ static int decode_strategy_8bit_direct(PNGDIB *p2d, int samples_per_pixel)
 static int decode_strategy_rgba(PNGDIB *p2d)
 {
 	size_t i, j;
-	unsigned char *pngimage = NULL;
-	unsigned char **pngrowpointers = NULL;
+	p2d_byte *pngimage = NULL;
+	p2d_byte **pngrowpointers = NULL;
 	double r,g,b,a;
 	double r_b,g_b,b_b; // composited with background color
 
-	pngimage = (unsigned char*)malloc(4*p2d->width*p2d->height);
+	pngimage = (p2d_byte*)malloc(4*p2d->width*p2d->height);
 	if(!pngimage) goto done;
-	pngrowpointers = (unsigned char**)malloc(p2d->height*sizeof(unsigned char*));
+	pngrowpointers = (p2d_byte**)malloc(p2d->height*sizeof(p2d_byte*));
 	if(!pngrowpointers) goto done;
 	for(j=0;j<p2d->height;j++) {
 		pngrowpointers[j] = &pngimage[j*4*p2d->width];
@@ -438,9 +438,9 @@ static int decode_strategy_rgba(PNGDIB *p2d)
 			// Instead of quantizing to the nearest linear color and then converting it to sRGB,
 			// we should use the quantized sRGB color that is nearest in a linear
 			// colorspace. There's no easy and efficient way to do that, though.
-			p2d->dib_row_pointers[j][i*3+0] = p2d->linear_to_srgb_table[(unsigned char)(0.5+b_b*255.0)];
-			p2d->dib_row_pointers[j][i*3+1] = p2d->linear_to_srgb_table[(unsigned char)(0.5+g_b*255.0)];
-			p2d->dib_row_pointers[j][i*3+2] = p2d->linear_to_srgb_table[(unsigned char)(0.5+r_b*255.0)];
+			p2d->dib_row_pointers[j][i*3+0] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+b_b*255.0)];
+			p2d->dib_row_pointers[j][i*3+1] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+g_b*255.0)];
+			p2d->dib_row_pointers[j][i*3+2] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+r_b*255.0)];
 		}
 	}
 
@@ -454,14 +454,14 @@ done:
 static int decode_strategy_graya(PNGDIB *p2d, int tocolor)
 {
 	size_t i, j;
-	unsigned char *pngimage = NULL;
-	unsigned char **pngrowpointers = NULL;
+	p2d_byte *pngimage = NULL;
+	p2d_byte **pngrowpointers = NULL;
 	double g,a;
 	double r_b,g_b,b_b; // composited with background color (g_b is gray or green)
 
-	pngimage = (unsigned char*)malloc(2*p2d->width*p2d->height);
+	pngimage = (p2d_byte*)malloc(2*p2d->width*p2d->height);
 	if(!pngimage) goto done;
-	pngrowpointers = (unsigned char**)malloc(p2d->height*sizeof(unsigned char*));
+	pngrowpointers = (p2d_byte**)malloc(p2d->height*sizeof(p2d_byte*));
 	if(!pngrowpointers) goto done;
 	for(j=0;j<p2d->height;j++) {
 		pngrowpointers[j] = &pngimage[j*2*p2d->width];
@@ -478,13 +478,13 @@ static int decode_strategy_graya(PNGDIB *p2d, int tocolor)
 				r_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.red;
 				g_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.green;
 				b_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.blue;
-				p2d->dib_row_pointers[j][i*3+0] = p2d->linear_to_srgb_table[(unsigned char)(0.5+b_b*255.0)];
-				p2d->dib_row_pointers[j][i*3+1] = p2d->linear_to_srgb_table[(unsigned char)(0.5+g_b*255.0)];
-				p2d->dib_row_pointers[j][i*3+2] = p2d->linear_to_srgb_table[(unsigned char)(0.5+r_b*255.0)];
+				p2d->dib_row_pointers[j][i*3+0] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+b_b*255.0)];
+				p2d->dib_row_pointers[j][i*3+1] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+g_b*255.0)];
+				p2d->dib_row_pointers[j][i*3+2] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+r_b*255.0)];
 			}
 			else {
 				g_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.red;
-				p2d->dib_row_pointers[j][i] = p2d->linear_to_srgb_table[(unsigned char)(0.5+g_b*255.0)];
+				p2d->dib_row_pointers[j][i] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+g_b*255.0)];
 			}
 		}
 	}
@@ -527,9 +527,9 @@ static int decode_strategy_palette(PNGDIB *p2d)
 			sm[2] = trns_alpha_1*sm[2] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.blue;
 		}
 
-		p2d->palette[i].rgbRed   = p2d->linear_to_srgb_table[(unsigned char)(0.5+sm[0]*255.0)];
-		p2d->palette[i].rgbGreen = p2d->linear_to_srgb_table[(unsigned char)(0.5+sm[1]*255.0)];
-		p2d->palette[i].rgbBlue  = p2d->linear_to_srgb_table[(unsigned char)(0.5+sm[2]*255.0)];
+		p2d->palette[i].rgbRed   = p2d->linear_to_srgb_table[(p2d_byte)(0.5+sm[0]*255.0)];
+		p2d->palette[i].rgbGreen = p2d->linear_to_srgb_table[(p2d_byte)(0.5+sm[1]*255.0)];
+		p2d->palette[i].rgbBlue  = p2d->linear_to_srgb_table[(p2d_byte)(0.5+sm[2]*255.0)];
 		p2d->palette[i].rgbReserved = 0;
 	}
 
@@ -551,9 +551,9 @@ int pngdib_p2d_run(PNGDIB *p2d)
 	jmp_buf jbuf;
 	struct errstruct errinfo;
 	int interlace_type;
-	unsigned char *lpdib;
-	unsigned char *dib_palette;
-	unsigned char *dib_bits;
+	p2d_byte *lpdib;
+	p2d_byte *dib_palette;
+	p2d_byte *dib_bits;
 	int dib_bpp, dib_bytesperrow;
 	int j;
 	int retval;
@@ -799,7 +799,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 
 	p2d->dibsize=sizeof(BITMAPINFOHEADER) + 4*p2d->dib_palette_entries + p2d->bitssize;
 
-	lpdib = (unsigned char*)calloc(p2d->dibsize,1);
+	lpdib = (p2d_byte*)calloc(p2d->dibsize,1);
 
 	if(!lpdib) { retval=PNGD_E_NOMEM; goto done; }
 	p2d->pdib = (LPBITMAPINFOHEADER)lpdib;
@@ -821,7 +821,7 @@ int pngdib_p2d_run(PNGDIB *p2d)
 
 	//////// Allocate row_pointers, which point to each row in the DIB we allocated.
 
-	p2d->dib_row_pointers=(unsigned char**)malloc(p2d->height*sizeof(unsigned char*));
+	p2d->dib_row_pointers=(p2d_byte**)malloc(p2d->height*sizeof(p2d_byte*));
 	if(!p2d->dib_row_pointers) { retval=PNGD_E_NOMEM; goto done; }
 
 	for(j=0;j<(int)p2d->height;j++) {
@@ -964,8 +964,7 @@ void pngdib_p2d_set_use_file_bg(PNGDIB *p2d, int flag)
 }
 
 // Colors are given in sRGB color space.
-void pngdib_p2d_set_custom_bg(PNGDIB *p2d, unsigned char r,
-								  unsigned char g, unsigned char b)
+void pngdib_p2d_set_custom_bg(PNGDIB *p2d, p2d_byte r, p2d_byte g, p2d_byte b)
 {
 	p2d->bkgd_color_custom_srgb.red = r;
 	p2d->bkgd_color_custom_srgb.green = g;
@@ -1011,7 +1010,7 @@ int pngdib_p2d_get_density(PNGDIB *p2d, int *pres_x, int *pres_y, int *pres_unit
 	return 0;
 }
 
-int pngdib_p2d_get_bgcolor(PNGDIB *p2d, unsigned char *pr, unsigned char *pg, unsigned char *pb)
+int pngdib_p2d_get_bgcolor(PNGDIB *p2d, p2d_byte *pr, p2d_byte *pg, p2d_byte *pb)
 {
 	if(p2d->bkgd_color_applied_flag) {
 		*pr = p2d->bkgd_color_applied_srgb.red;
