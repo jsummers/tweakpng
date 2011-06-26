@@ -283,12 +283,20 @@ static void p2d_make_gray_palette(P2D *p2d)
 {
 	int i;
 	p2d_byte v;
+	int mult;
+
+	switch(p2d->dib_palette_entries) {
+	case 2: mult=255; break;
+	case 4: mult=85; break;
+	case 16: mult=17; break;
+	default: mult=1;
+	}
 
 	for(i=0;i<p2d->dib_palette_entries;i++) {
 		if(p2d->color_correct_gray_palette)
-			v=src255_to_srgb255_sample(p2d,i);
+			v=src255_to_srgb255_sample(p2d,i*mult);
 		else
-			v=i;
+			v=i*mult;
 		p2d->palette[i].rgbRed = v;
 		p2d->palette[i].rgbGreen = v;
 		p2d->palette[i].rgbBlue = v;
@@ -585,6 +593,23 @@ done:
 	return retval;
 }
 
+static int decode_strategy_gray124(P2D *p2d)
+{
+	int retval=0;
+
+	// Directly read the image into the DIB.
+	png_read_image(p2d->png_ptr, p2d->dib_row_pointers);
+
+	if(p2d->pngf_bit_depth==2) {
+		// Special handling for this bit depth, since it doesn't exist in DIBs.
+		if(!p2d_convert_2bit_to_4bit(p2d)) goto done;
+	}
+
+	retval=1;
+done:
+	return retval;
+}
+
 int p2d_run(P2D *p2d)
 {
 	jmp_buf jbuf;
@@ -598,7 +623,7 @@ int p2d_run(P2D *p2d)
 	int retval;
 	size_t palette_offs;
 	enum p2d_strategy { P2D_ST_NONE, P2D_ST_8BIT_DIRECT, P2D_ST_RGBA, P2D_ST_GRAYA,
-	  P2D_ST_PALETTE };
+	  P2D_ST_PALETTE, P2D_ST_GRAY124 };
 	enum p2d_strategy decode_strategy;
 	int strategy_spp=0;
 	int strategy_tocolor=0;
@@ -712,16 +737,26 @@ int p2d_run(P2D *p2d)
 	p2d->dib_palette_entries=0; // default
 
 	if(p2d->color_type==PNG_COLOR_TYPE_GRAY && !p2d->has_trns) {
-		decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=1; strategy_colorcorrect=0;
-		dib_bpp=8;
-		p2d->need_gray_palette=1; p2d->color_correct_gray_palette=1;
-		p2d->dib_palette_entries=256;
 		if(p2d->pngf_bit_depth<8) {
-			// TODO: Don't do this.
-			png_set_expand_gray_1_2_4_to_8(p2d->png_ptr);
+			decode_strategy=P2D_ST_GRAY124;
+
+			if(p2d->pngf_bit_depth==2)
+				dib_bpp=4;
+			else
+				dib_bpp=p2d->pngf_bit_depth;
+
+			p2d->need_gray_palette=1; p2d->color_correct_gray_palette=1;
+			p2d->dib_palette_entries= 1 << p2d->pngf_bit_depth;
+			//png_set_expand_gray_1_2_4_to_8(p2d->png_ptr);
 		}
-		else if(p2d->pngf_bit_depth==16) {
-			png_set_strip_16(p2d->png_ptr);
+		else { // bitdepth = 8 or 16
+			decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=1; strategy_colorcorrect=0;
+			dib_bpp=8;
+			p2d->need_gray_palette=1; p2d->color_correct_gray_palette=1;
+			p2d->dib_palette_entries=256;
+			if(p2d->pngf_bit_depth==16) {
+				png_set_strip_16(p2d->png_ptr);
+			}
 		}
 	}
 	else if(p2d->color_type==PNG_COLOR_TYPE_GRAY_ALPHA || (p2d->color_type==PNG_COLOR_TYPE_GRAY && p2d->has_trns) ) {
@@ -886,6 +921,9 @@ int p2d_run(P2D *p2d)
 		break;
 	case P2D_ST_PALETTE:
 		decode_strategy_palette(p2d);
+		break;
+	case P2D_ST_GRAY124:
+		decode_strategy_gray124(p2d);
 		break;
 	default:
 		retval=PNGD_E_ERROR; goto done;
