@@ -70,9 +70,10 @@ struct p2d_struct {
 	struct PNGD_COLOR_struct bkgd_color_applied_src;
 	struct PNGD_COLOR_struct bkgd_color_applied_srgb;
 	struct PNGD_COLOR_fltpt_struct bkgd_color_applied_linear;
-	int bkgd_color_applied_flag;
+	int bkgd_color_applied_flag; // Is bkgd_color_applied_* valid?
 
 	int color_correction_enabled;
+	int handle_trans; // Do we need to apply a background color?
 
 	BITMAPINFOHEADER*   pdib;
 	int        dibsize;
@@ -556,7 +557,7 @@ static int decode_strategy_palette(P2D *p2d)
 	if(p2d->pngf_palette_entries != p2d->dib_palette_entries) return 0;
 
 	num_trans=0;
-	if(p2d->has_trns && p2d->bkgd_color_applied_flag) {
+	if(p2d->handle_trans) {
 		png_get_tRNS(p2d->png_ptr, p2d->info_ptr, &trans_alpha, &num_trans, &trans_color);
 	}
 	// Copy the PNG palette to the DIB palette, handling color correction
@@ -610,7 +611,7 @@ static int decode_strategy_gray_to_pal(P2D *p2d)
 	png_color_16p trans_color;
 	int num_trans;
 
-	if(p2d->has_trns && p2d->bkgd_color_applied_flag) {
+	if(p2d->handle_trans) {
 		// Binary transparency is handled by changing one of the palette colors
 		// to the background color.
 		png_get_tRNS(p2d->png_ptr, p2d->info_ptr, &trans_alpha, &num_trans, &trans_color);
@@ -747,125 +748,113 @@ int p2d_run(P2D *p2d)
 
 	p2d_read_density(p2d);
 
+	if(p2d->bkgd_color_applied_flag) {
+		if(p2d->has_trns || (p2d->color_type & PNG_COLOR_MASK_ALPHA)) {
+			p2d->handle_trans=1;
+		}
+	}
+
+	// Figure out if the background color is a shade of gray
+	bg_is_gray=1;
+	if(p2d->handle_trans) {
+		if(p2d->bkgd_color_applied_srgb.red!=p2d->bkgd_color_applied_srgb.green ||
+			p2d->bkgd_color_applied_srgb.red!=p2d->bkgd_color_applied_srgb.blue)
+		{
+			bg_is_gray=0;
+		}
+	}
 
 	//////// Decide on DIB image type, etc.
 
 	// This is inevitably a complicated part of the code, because we have to
 	// cover a lot of different cases, which overlap in various ways.
 
-	// TODO: In some cases this uses libpng to inefficiently convert to a
-	// different image type (e.g. palette to RGB), to reduce the number of cases
-	// we need to handle. This is intended to be temporary: more algorithms
-	// will be added later to make it more efficient.
-
 	p2d->dib_palette_entries=0; // default
 
-	if(p2d->color_type==PNG_COLOR_TYPE_GRAY && p2d->pngf_bit_depth<8) {
+	if((p2d->color_type & PNG_COLOR_MASK_ALPHA) && !p2d->handle_trans) {
+		// Image has an alpha channel, but we don't have a background color
+		// to use. Have libpng strip the alpha channel.
+		png_set_strip_alpha(p2d->png_ptr);
+		p2d->color_type -= PNG_COLOR_MASK_ALPHA;
+	}
+
+	if(p2d->color_type==PNG_COLOR_TYPE_GRAY && p2d->pngf_bit_depth==16 && p2d->handle_trans) {
+		// 16-bit grayscale w/binary transparency is an unusual case, so get it out
+		// of the way first.
+		png_set_tRNS_to_alpha(p2d->png_ptr);
+		png_set_strip_16(p2d->png_ptr);
+		if(bg_is_gray) {
+			decode_strategy=P2D_ST_GRAYA; strategy_tocolor=0;
+			dib_bpp=8;
+			p2d->need_gray_palette=1; p2d->color_correct_gray_palette=0;
+			p2d->dib_palette_entries=256;
+		}
+		else { // color background
+			decode_strategy=P2D_ST_GRAYA; strategy_tocolor=1;
+			dib_bpp=24;
+		}
+	}
+	else if(p2d->color_type==PNG_COLOR_TYPE_GRAY) {
+		// All other grayscale (no alpha channel) cases are handled here.
 		decode_strategy=P2D_ST_GRAY_TO_PAL;
 
 		if(p2d->pngf_bit_depth==2)
 			dib_bpp=4;
+		else if(p2d->pngf_bit_depth==16)
+			dib_bpp=8;
 		else
 			dib_bpp=p2d->pngf_bit_depth;
 
 		p2d->need_gray_palette=1; p2d->color_correct_gray_palette=1;
-		p2d->dib_palette_entries= 1 << p2d->pngf_bit_depth;
-	}
-	else if(p2d->color_type==PNG_COLOR_TYPE_GRAY && !p2d->has_trns) {
-		// bitdepth = 8 or 16
-		decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=1; strategy_colorcorrect=0;
-		dib_bpp=8;
-		p2d->need_gray_palette=1; p2d->color_correct_gray_palette=1;
-		p2d->dib_palette_entries=256;
 		if(p2d->pngf_bit_depth==16) {
 			png_set_strip_16(p2d->png_ptr);
+			p2d->dib_palette_entries = 256;
+		}
+		else {
+			p2d->dib_palette_entries = 1 << p2d->pngf_bit_depth;
 		}
 	}
-	else if(p2d->color_type==PNG_COLOR_TYPE_GRAY_ALPHA || (p2d->color_type==PNG_COLOR_TYPE_GRAY && p2d->has_trns) ) {
+	else if(p2d->color_type==PNG_COLOR_TYPE_GRAY_ALPHA) {
 
-		// Figure out if the background color is a shade of gray
-		bg_is_gray=1;
-		if(p2d->bkgd_color_applied_flag) {
-			if(p2d->bkgd_color_applied_srgb.red!=p2d->bkgd_color_applied_srgb.green ||
-				p2d->bkgd_color_applied_srgb.red!=p2d->bkgd_color_applied_srgb.blue)
-			{
-				bg_is_gray=0;
-			}
-		}
-
-		if(p2d->bkgd_color_applied_flag && bg_is_gray) {
+		if(bg_is_gray) {
 			// Applying a gray background.
 			decode_strategy=P2D_ST_GRAYA; strategy_tocolor=0;
 			dib_bpp=8;
 			p2d->need_gray_palette=1; p2d->color_correct_gray_palette=0;
 			p2d->dib_palette_entries=256;
 		}
-		else if(p2d->bkgd_color_applied_flag && !bg_is_gray) {
+		else {
 			// Applying a color background to a grayscale image.
 			decode_strategy=P2D_ST_GRAYA; strategy_tocolor=1;
 			dib_bpp=24;
-			//p2d->dib_palette_entries=0;
-		}
-		else if(!p2d->bkgd_color_applied_flag) {
-			// Strip the alpha channel.
-			decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=1; strategy_colorcorrect=0;
-			dib_bpp=8;
-			p2d->need_gray_palette=1; p2d->color_correct_gray_palette=1;
-			p2d->dib_palette_entries=256;
-			png_set_strip_alpha(p2d->png_ptr);
 		}
 
-		if(p2d->color_type==PNG_COLOR_TYPE_GRAY) {
-			// TODO: Don't do this.
-			png_set_tRNS_to_alpha(p2d->png_ptr);
-		}
-
-		if(p2d->pngf_bit_depth<8) {
-			// TODO: Don't do this.
-			png_set_expand_gray_1_2_4_to_8(p2d->png_ptr);
-		}
-		else if(p2d->pngf_bit_depth==16) {
+		if(p2d->pngf_bit_depth==16) {
 			png_set_strip_16(p2d->png_ptr);
 		}
 	}
-	else if(p2d->color_type==PNG_COLOR_TYPE_RGB && !p2d->has_trns) {
+	else if(p2d->color_type==PNG_COLOR_TYPE_RGB && !p2d->handle_trans) {
+		// RGB with no transparency.
 		decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=3; strategy_colorcorrect=1;
 		dib_bpp=24;
 		if(p2d->pngf_bit_depth==16) {
 			png_set_strip_16(p2d->png_ptr);
 		}
 	}
-	else if(p2d->color_type==PNG_COLOR_TYPE_RGB && p2d->has_trns) {
+	else if(p2d->color_type==PNG_COLOR_TYPE_RGB) {
 		// RGB with binary transparency.
-
+		decode_strategy=P2D_ST_RGBA;
 		dib_bpp=24;
+		// TODO: We could handle transparency ourselves, more efficiently,
+		// without promoting it to a whole alpha channel.
+		png_set_tRNS_to_alpha(p2d->png_ptr);
 
-		if(p2d->bkgd_color_applied_flag) {
-			decode_strategy=P2D_ST_RGBA;
-			if(p2d->pngf_bit_depth==16) {
-				png_set_strip_16(p2d->png_ptr);
-			}
-			// TODO: We could handle transparency ourselves, more efficiently,
-			// without promoting it to a whole alpha channel.
-			png_set_tRNS_to_alpha(p2d->png_ptr);
-		}
-		else {
-			// Transparency disabled; just ignore the trns chunk.
-			decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=3; strategy_colorcorrect=1;
-			if(p2d->pngf_bit_depth==16) {
-				png_set_strip_16(p2d->png_ptr);
-			}
+		if(p2d->pngf_bit_depth==16) {
+			png_set_strip_16(p2d->png_ptr);
 		}
 	}
 	else if(p2d->color_type==PNG_COLOR_TYPE_RGB_ALPHA) {
-		if(p2d->bkgd_color_applied_flag) {
-			decode_strategy=P2D_ST_RGBA;
-		}
-		else {
-			// No background color to use, so strip the alpha channel.
-			decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=3; strategy_colorcorrect=1;
-			png_set_strip_alpha(p2d->png_ptr);
-		}
+		decode_strategy=P2D_ST_RGBA;
 		dib_bpp=24;
 		if(p2d->pngf_bit_depth==16) {
 			png_set_strip_16(p2d->png_ptr);
@@ -874,12 +863,10 @@ int p2d_run(P2D *p2d)
 	else if(p2d->color_type==PNG_COLOR_TYPE_PALETTE) {
 		png_get_PLTE(p2d->png_ptr,p2d->info_ptr,&p2d->pngf_palette,&p2d->pngf_palette_entries);
 		p2d->dib_palette_entries = p2d->pngf_palette_entries;
-		if(p2d->pngf_bit_depth==2) {
+		if(p2d->pngf_bit_depth==2)
 			dib_bpp=4;
-		}
-		else {
+		else
 			dib_bpp=p2d->pngf_bit_depth;
-		}
 		decode_strategy=P2D_ST_PALETTE;
 	}
 
