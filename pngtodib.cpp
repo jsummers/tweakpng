@@ -38,17 +38,22 @@
 #define P2D_CC_GAMMA 1
 #define P2D_CC_SRGB  2
 
+// Names of RGB samples
+#define P2D_SM_R 0 // red
+#define P2D_SM_G 1 // green
+#define P2D_SM_B 2 // blue
+
 struct p2d_globals_struct {
 	p2d_byte *linear_to_srgb_table;
 	p2d_byte *identity255_table;
 };
 
 struct p2d_color255_struct {
-	p2d_byte red, green, blue;
+	p2d_byte sm255[3]; // Indexed by P2D_SM_*
 };
 
 struct p2d_color_fltpt_struct {
-	double red, green, blue;
+	double sm[3]; // Indexed by P2D_SM_*
 };
 
 // Colorspace descriptor
@@ -230,31 +235,32 @@ static void p2d_read_bgcolor(P2D *p2d)
 			tmpcolor = (p2d_byte)(bg_colorp->gray);
 		}
 
-		p2d->bkgd_color_applied_src.red  = p2d->bkgd_color_applied_src.green = p2d->bkgd_color_applied_src.blue = tmpcolor;
+		p2d->bkgd_color_applied_src.sm255[P2D_SM_R] = p2d->bkgd_color_applied_src.sm255[P2D_SM_G] =
+			p2d->bkgd_color_applied_src.sm255[P2D_SM_B] = tmpcolor;
 		p2d->bkgd_color_applied_flag = 1;
 	}
 	else if(p2d->pngf_bit_depth<=8) { // RGB[A]8 or palette
-		p2d->bkgd_color_applied_src.red  =(p2d_byte)(bg_colorp->red);
-		p2d->bkgd_color_applied_src.green=(p2d_byte)(bg_colorp->green);
-		p2d->bkgd_color_applied_src.blue =(p2d_byte)(bg_colorp->blue);
+		p2d->bkgd_color_applied_src.sm255[P2D_SM_R] =(p2d_byte)(bg_colorp->red);
+		p2d->bkgd_color_applied_src.sm255[P2D_SM_G] =(p2d_byte)(bg_colorp->green);
+		p2d->bkgd_color_applied_src.sm255[P2D_SM_B] =(p2d_byte)(bg_colorp->blue);
 		p2d->bkgd_color_applied_flag = 1;
 	}
 	else {
-		p2d->bkgd_color_applied_src.red  =(p2d_byte)(bg_colorp->red>>8);
-		p2d->bkgd_color_applied_src.green=(p2d_byte)(bg_colorp->green>>8);
-		p2d->bkgd_color_applied_src.blue =(p2d_byte)(bg_colorp->blue>>8);
+		p2d->bkgd_color_applied_src.sm255[P2D_SM_R] =(p2d_byte)(bg_colorp->red>>8);
+		p2d->bkgd_color_applied_src.sm255[P2D_SM_G] =(p2d_byte)(bg_colorp->green>>8);
+		p2d->bkgd_color_applied_src.sm255[P2D_SM_B] =(p2d_byte)(bg_colorp->blue>>8);
 		p2d->bkgd_color_applied_flag = 1;
 	}
 
 	if(!p2d->bkgd_color_applied_flag) return;
 
-	p2d->bkgd_color_applied_linear.red   = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.red);
-	p2d->bkgd_color_applied_linear.green = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.green);
-	p2d->bkgd_color_applied_linear.blue  = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.blue);
+	p2d->bkgd_color_applied_linear.sm[P2D_SM_R] = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_R]);
+	p2d->bkgd_color_applied_linear.sm[P2D_SM_G] = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_G]);
+	p2d->bkgd_color_applied_linear.sm[P2D_SM_B] = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_B]);
 
-	p2d->bkgd_color_applied_srgb.red   = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.red);
-	p2d->bkgd_color_applied_srgb.green = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.green);
-	p2d->bkgd_color_applied_srgb.blue  = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.blue);
+	p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R] = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_R]);
+	p2d->bkgd_color_applied_srgb.sm255[P2D_SM_G] = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_G]);
+	p2d->bkgd_color_applied_srgb.sm255[P2D_SM_B] = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_B]);
 }
 
 static void p2d_read_gamma(P2D *p2d)
@@ -479,9 +485,9 @@ static int decode_strategy_rgba(P2D *p2d)
 			b = src255_to_linear_sample(p2d,pngrowpointers[j][i*4+2]);
 			a = ((double)pngrowpointers[j][i*4+3])/255.0;
 
-			r_b  = a*r + (1.0-a)*p2d->bkgd_color_applied_linear.red;
-			g_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.green;
-			b_b  = a*b + (1.0-a)*p2d->bkgd_color_applied_linear.blue;
+			r_b  = a*r + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
+			g_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_G];
+			b_b  = a*b + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_B];
 
 			// TODO: This is not perfect.
 			// Instead of quantizing to the nearest linear color and then converting it to sRGB,
@@ -524,15 +530,15 @@ static int decode_strategy_graya(P2D *p2d, int tocolor)
 			a = ((double)pngrowpointers[j][i*2+1])/255.0;
 
 			if(tocolor) {
-				r_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.red;
-				g_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.green;
-				b_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.blue;
+				r_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
+				g_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_G];
+				b_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_B];
 				p2d->dib_row_pointers[j][i*3+0] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+b_b*255.0)];
 				p2d->dib_row_pointers[j][i*3+1] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+g_b*255.0)];
 				p2d->dib_row_pointers[j][i*3+2] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+r_b*255.0)];
 			}
 			else {
-				g_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.red;
+				g_b  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
 				p2d->dib_row_pointers[j][i] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+g_b*255.0)];
 			}
 		}
@@ -571,9 +577,9 @@ static int decode_strategy_palette(P2D *p2d)
 		// Apply background color
 		if(i < num_trans) {
 			trns_alpha_1 = ((double)trans_alpha[i])/255.0;
-			sm[0] = trns_alpha_1*sm[0] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.red;
-			sm[1] = trns_alpha_1*sm[1] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.green;
-			sm[2] = trns_alpha_1*sm[2] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.blue;
+			sm[0] = trns_alpha_1*sm[0] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
+			sm[1] = trns_alpha_1*sm[1] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.sm[P2D_SM_G];
+			sm[2] = trns_alpha_1*sm[2] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.sm[P2D_SM_B];
 		}
 
 		p2d->dib_palette[i].rgbRed   = p2d->linear_to_srgb_table[(p2d_byte)(0.5+sm[0]*255.0)];
@@ -616,9 +622,9 @@ static int decode_strategy_gray_to_pal(P2D *p2d)
 		// to the background color.
 		png_get_tRNS(p2d->png_ptr, p2d->info_ptr, &trans_alpha, &num_trans, &trans_color);
 		if(trans_color->gray>=0 && trans_color->gray<p2d->dib_palette_entries) {
-			p2d->dib_palette[trans_color->gray].rgbRed   = p2d->bkgd_color_applied_srgb.red;
-			p2d->dib_palette[trans_color->gray].rgbGreen = p2d->bkgd_color_applied_srgb.green;
-			p2d->dib_palette[trans_color->gray].rgbBlue  = p2d->bkgd_color_applied_srgb.blue;
+			p2d->dib_palette[trans_color->gray].rgbRed   = p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R];
+			p2d->dib_palette[trans_color->gray].rgbGreen = p2d->bkgd_color_applied_srgb.sm255[P2D_SM_G];
+			p2d->dib_palette[trans_color->gray].rgbBlue  = p2d->bkgd_color_applied_srgb.sm255[P2D_SM_B];
 		}
 	}
 
@@ -670,22 +676,22 @@ int p2d_run(P2D *p2d)
 		p2d->bkgd_color_applied_flag = 1;
 	}
 	else {
-		p2d->bkgd_color_applied_srgb.red   = 255; // Should never get used. If the
-		p2d->bkgd_color_applied_srgb.green = 128; // background turns orange, it's a bug.
-		p2d->bkgd_color_applied_srgb.blue  =  0;
+		p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R] = 255; // Should never get used. If the
+		p2d->bkgd_color_applied_srgb.sm255[P2D_SM_G] = 128; // background turns orange, it's a bug.
+		p2d->bkgd_color_applied_srgb.sm255[P2D_SM_B] =  0;
 	}
 
 	if(p2d->color_correction_enabled) {
 		// Also store the custom background color in a linear colorspace, since that's
 		// what we'll need if we have to apply it to the image.
-		p2d->bkgd_color_applied_linear.red   = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.red)/255.0);
-		p2d->bkgd_color_applied_linear.green = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.green)/255.0);
-		p2d->bkgd_color_applied_linear.blue  = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.blue)/255.0);
+		p2d->bkgd_color_applied_linear.sm[P2D_SM_R] = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R])/255.0);
+		p2d->bkgd_color_applied_linear.sm[P2D_SM_G] = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_G])/255.0);
+		p2d->bkgd_color_applied_linear.sm[P2D_SM_B] = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_B])/255.0);
 	}
 	else {
-		p2d->bkgd_color_applied_linear.red   = ((double)p2d->bkgd_color_applied_srgb.red)/255.0;
-		p2d->bkgd_color_applied_linear.green = ((double)p2d->bkgd_color_applied_srgb.green)/255.0;
-		p2d->bkgd_color_applied_linear.blue  = ((double)p2d->bkgd_color_applied_srgb.blue)/255.0;
+		p2d->bkgd_color_applied_linear.sm[P2D_SM_R] = ((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R])/255.0;
+		p2d->bkgd_color_applied_linear.sm[P2D_SM_G] = ((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_G])/255.0;
+		p2d->bkgd_color_applied_linear.sm[P2D_SM_B] = ((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_B])/255.0;
 	}
 
 
@@ -755,8 +761,8 @@ int p2d_run(P2D *p2d)
 	// Figure out if the background color is a shade of gray
 	bg_is_gray=1;
 	if(p2d->handle_trans) {
-		if(p2d->bkgd_color_applied_srgb.red!=p2d->bkgd_color_applied_srgb.green ||
-			p2d->bkgd_color_applied_srgb.red!=p2d->bkgd_color_applied_srgb.blue)
+		if(p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R]!=p2d->bkgd_color_applied_srgb.sm255[P2D_SM_G] ||
+			p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R]!=p2d->bkgd_color_applied_srgb.sm255[P2D_SM_B])
 		{
 			bg_is_gray=0;
 		}
@@ -1032,12 +1038,12 @@ void p2d_set_use_file_bg(P2D *p2d, int flag)
 // Colors are given in sRGB color space.
 void p2d_set_custom_bg(P2D *p2d, p2d_byte r, p2d_byte g, p2d_byte b)
 {
-	p2d->bkgd_color_custom_srgb.red = r;
-	p2d->bkgd_color_custom_srgb.green = g;
-	p2d->bkgd_color_custom_srgb.blue = b;
-	p2d->bkgd_color_custom_linear.red   = srgb_to_linear_sample(((double)r)/255.0);
-	p2d->bkgd_color_custom_linear.green = srgb_to_linear_sample(((double)g)/255.0);
-	p2d->bkgd_color_custom_linear.blue  = srgb_to_linear_sample(((double)b)/255.0);
+	p2d->bkgd_color_custom_srgb.sm255[P2D_SM_R] = r;
+	p2d->bkgd_color_custom_srgb.sm255[P2D_SM_G] = g;
+	p2d->bkgd_color_custom_srgb.sm255[P2D_SM_B] = b;
+	p2d->bkgd_color_custom_linear.sm[P2D_SM_R] = srgb_to_linear_sample(((double)r)/255.0);
+	p2d->bkgd_color_custom_linear.sm[P2D_SM_G] = srgb_to_linear_sample(((double)g)/255.0);
+	p2d->bkgd_color_custom_linear.sm[P2D_SM_B] = srgb_to_linear_sample(((double)b)/255.0);
 	p2d->use_custom_bg_flag = 1;
 }
 
@@ -1075,9 +1081,9 @@ int p2d_get_density(P2D *p2d, int *pres_x, int *pres_y, int *pres_units)
 int p2d_get_bgcolor(P2D *p2d, p2d_byte *pr, p2d_byte *pg, p2d_byte *pb)
 {
 	if(p2d->bkgd_color_applied_flag) {
-		*pr = p2d->bkgd_color_applied_srgb.red;
-		*pg = p2d->bkgd_color_applied_srgb.green;
-		*pb = p2d->bkgd_color_applied_srgb.blue;
+		*pr = p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R];
+		*pg = p2d->bkgd_color_applied_srgb.sm255[P2D_SM_G];
+		*pb = p2d->bkgd_color_applied_srgb.sm255[P2D_SM_B];
 		return 1;
 	}
 	return 0;
