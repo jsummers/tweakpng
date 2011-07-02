@@ -43,12 +43,18 @@ struct p2d_globals_struct {
 	p2d_byte *identity255_table;
 };
 
-struct PNGD_COLOR_struct {
-	p2d_byte red, green, blue, reserved;
+struct p2d_color255_struct {
+	p2d_byte red, green, blue;
 };
 
-struct PNGD_COLOR_fltpt_struct {
+struct p2d_color_fltpt_struct {
 	double red, green, blue;
+};
+
+// Colorspace descriptor
+struct p2d_csdescr_struct {
+	int type; // P2D_CC_*
+	double file_gamma; // Used if .type==P2D_CC_GAMMA
 };
 
 struct p2d_struct {
@@ -63,13 +69,13 @@ struct p2d_struct {
 
 	int use_file_bg_flag;
 
-	struct PNGD_COLOR_struct bkgd_color_custom_srgb; // sRGB color space, 0-255
-	struct PNGD_COLOR_fltpt_struct bkgd_color_custom_linear; // linear, 0.0-1.0
+	struct p2d_color255_struct bkgd_color_custom_srgb; // sRGB color space, 0-255
+	struct p2d_color_fltpt_struct bkgd_color_custom_linear; // linear, 0.0-1.0
 	int use_custom_bg_flag;
 
-	struct PNGD_COLOR_struct bkgd_color_applied_src;
-	struct PNGD_COLOR_struct bkgd_color_applied_srgb;
-	struct PNGD_COLOR_fltpt_struct bkgd_color_applied_linear;
+	struct p2d_color255_struct bkgd_color_applied_src;
+	struct p2d_color255_struct bkgd_color_applied_srgb;
+	struct p2d_color_fltpt_struct bkgd_color_applied_linear;
 	int bkgd_color_applied_flag; // Is bkgd_color_applied_* valid?
 
 	int color_correction_enabled;
@@ -90,8 +96,7 @@ struct p2d_struct {
 	int color_type;
 
 	// Color information about the source image. The destination image is always sRGB.
-	int color_correction_type; // P2D_CC_*
-	double file_gamma; // Used if color_correction_type==P2D_CC_GAMMA
+	struct p2d_csdescr_struct csdescr;
 
 	int pngf_palette_entries;
 	png_colorp pngf_palette;
@@ -255,22 +260,24 @@ static void p2d_read_bgcolor(P2D *p2d)
 static void p2d_read_gamma(P2D *p2d)
 {
 	int intent;
+	struct p2d_csdescr_struct *cs;
 
 	if(!p2d->color_correction_enabled) return;
+	cs = &p2d->csdescr;
 
 	if (png_get_sRGB(p2d->png_ptr, p2d->info_ptr, &intent)) {
-		p2d->color_correction_type = P2D_CC_SRGB;
-		p2d->file_gamma = 0.45455;
+		cs->type = P2D_CC_SRGB;
+		cs->file_gamma = 0.45455;
 	}
-	else if(png_get_gAMA(p2d->png_ptr, p2d->info_ptr, &p2d->file_gamma)) {
-		if(p2d->file_gamma<0.01) p2d->file_gamma=0.01;
-		if(p2d->file_gamma>10.0) p2d->file_gamma=10.0;
-		p2d->color_correction_type = P2D_CC_GAMMA;
+	else if(png_get_gAMA(p2d->png_ptr, p2d->info_ptr, &cs->file_gamma)) {
+		if(cs->file_gamma<0.01) cs->file_gamma=0.01;
+		if(cs->file_gamma>10.0) cs->file_gamma=10.0;
+		cs->type = P2D_CC_GAMMA;
 	}
 	else {
 		// Assume unlabeled images are sRGB.
-		p2d->color_correction_type = P2D_CC_SRGB;
-		p2d->file_gamma = 0.45455;
+		cs->type = P2D_CC_SRGB;
+		cs->file_gamma = 0.45455;
 	}
 }
 
@@ -396,11 +403,11 @@ static int p2d_make_color_correction_tables(P2D *p2d)
 		val_src = ((double)n)/255.0;
 
 		if(p2d->color_correction_enabled) {
-			if(p2d->color_correction_type==P2D_CC_SRGB) {
+			if(p2d->csdescr.type==P2D_CC_SRGB) {
 				val_linear = srgb_to_linear_sample(val_src);
 			}
-			else if(p2d->color_correction_type==P2D_CC_GAMMA) {
-				val_linear =  gamma_to_linear_sample(val_src,1.0/p2d->file_gamma);
+			else if(p2d->csdescr.type==P2D_CC_GAMMA) {
+				val_linear =  gamma_to_linear_sample(val_src,1.0/p2d->csdescr.file_gamma);
 			}
 			else {
 				val_linear = val_src;
@@ -435,7 +442,7 @@ static int decode_strategy_8bit_direct(P2D *p2d, int samples_per_pixel, int colo
 	png_read_image(p2d->png_ptr, p2d->dib_row_pointers);
 
 	// With no transparency, sRGB source images don't need color correction.
-	if(p2d->color_correction_type==P2D_CC_GAMMA && colorcorrect) {
+	if(p2d->csdescr.type==P2D_CC_GAMMA && colorcorrect) {
 		samples_per_row = samples_per_pixel*p2d->width;
 
 		for(j=0;j<p2d->height;j++) {
