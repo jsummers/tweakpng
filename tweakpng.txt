@@ -377,6 +377,17 @@ runs the filter, reads in the temporary file it created, then deletes both
 temporary files.
 
 
+Color correction
+----------------
+
+The TweakPNG image viewer assumes that your monitor uses the standard sRGB
+color space, and (if gamma correction is enabled) converts images to sRGB
+when displaying them. It supports gAMA and sRGB chunks, but not cHRM
+(chromaticities) or iCCP (color profile) chunks. It knows that sRGB is not
+exactly the same as gamma=1/2.2, and the difference can be noticeable,
+especially in dark regions of an image.
+
+
 ==================== MNG support ====================
 
 MNG is a PNG-like format that supports multi-image files and animation. In 
