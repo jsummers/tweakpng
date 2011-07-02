@@ -44,7 +44,7 @@
 #define P2D_SM_B 2 // blue
 
 struct p2d_globals_struct {
-	p2d_byte *linear_to_srgb_table;
+	p2d_byte *linear_to_srgb255_table;
 	p2d_byte *identity255_table;
 };
 
@@ -108,9 +108,9 @@ struct p2d_struct {
 
 	p2d_byte **dib_row_pointers;
 
-	double *src_to_linear_table;
-	p2d_byte *src_to_dst_table;
-	const p2d_byte *linear_to_srgb_table;
+	double *src255_to_linear_table;
+	p2d_byte *src255_to_srgb255_table;
+	const p2d_byte *linear_to_srgb255_table;
 
 	int dib_palette_entries;
 	int need_gray_palette;
@@ -192,22 +192,6 @@ static void p2d_read_density(P2D *p2d)
 	p2d->res_valid=1;
 }
 
-static double src255_to_linear_sample(P2D *p2d, p2d_byte sample)
-{
-	if(p2d->src_to_linear_table) {
-		return p2d->src_to_linear_table[sample];
-	}
-	return ((double)sample)/255.0;
-}
-
-static p2d_byte src255_to_srgb255_sample(P2D *p2d, p2d_byte sample)
-{
-	if(p2d->src_to_dst_table) {
-		return p2d->src_to_dst_table[sample];
-	}
-	return sample;
-}
-
 static void p2d_read_bgcolor(P2D *p2d)
 {
 	png_color_16p bg_colorp;
@@ -256,8 +240,8 @@ static void p2d_read_bgcolor(P2D *p2d)
 	if(!p2d->bkgd_color_applied_flag) return;
 
 	for(k=0;k<3;k++) {
-		p2d->bkgd_color_applied_linear.sm[k] = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.sm255[k]);
-		p2d->bkgd_color_applied_srgb.sm255[k] = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.sm255[k]);
+		p2d->bkgd_color_applied_linear.sm[k] = p2d->src255_to_linear_table[p2d->bkgd_color_applied_src.sm255[k]];
+		p2d->bkgd_color_applied_srgb.sm255[k] = p2d->src255_to_srgb255_table[p2d->bkgd_color_applied_src.sm255[k]];
 	}
 }
 
@@ -301,7 +285,7 @@ static void p2d_make_gray_palette(P2D *p2d)
 
 	for(i=0;i<p2d->dib_palette_entries;i++) {
 		if(p2d->color_correct_gray_palette)
-			v=src255_to_srgb255_sample(p2d,i*mult);
+			v=p2d->src255_to_srgb255_table[i*mult];
 		else
 			v=i*mult;
 		p2d->dib_palette[i].rgbRed = v;
@@ -337,14 +321,6 @@ static double gamma_to_linear_sample(double v, double gamma)
 	return pow(v,gamma);
 }
 
-static double linear_to_srgb_sample(double v_linear)
-{
-	if(v_linear <= 0.0031308) {
-		return 12.92*v_linear;
-	}
-	return 1.055*pow(v_linear,1.0/2.4) - 0.055;
-}
-
 static double srgb_to_linear_sample(double v_srgb)
 {
 	if(v_srgb<=0.04045) {
@@ -355,18 +331,26 @@ static double srgb_to_linear_sample(double v_srgb)
 	}
 }
 
+static double linear_to_srgb_sample(double v_linear)
+{
+	if(v_linear <= 0.0031308) {
+		return 12.92*v_linear;
+	}
+	return 1.055*pow(v_linear,1.0/2.4) - 0.055;
+}
+
 static int p2d_make_global_tables(struct p2d_globals_struct *g)
 {
 	int n;
 	double val;
 
-	if(!g->linear_to_srgb_table) {
-		g->linear_to_srgb_table = (p2d_byte*)malloc(256*sizeof(p2d_byte));
-		if(!g->linear_to_srgb_table) return 0;
+	if(!g->linear_to_srgb255_table) {
+		g->linear_to_srgb255_table = (p2d_byte*)malloc(256*sizeof(p2d_byte));
+		if(!g->linear_to_srgb255_table) return 0;
 
 		for(n=0;n<256;n++) {
 			val = linear_to_srgb_sample(((double)n)/255.0);
-			g->linear_to_srgb_table[n] = (p2d_byte)(0.5+val*255.0);
+			g->linear_to_srgb255_table[n] = (p2d_byte)(0.5+val*255.0);
 		}
 	}
 
@@ -391,17 +375,17 @@ static int p2d_make_color_correction_tables(P2D *p2d)
 	// TODO: We should only make the tables that we'll actually use.
 	p2d_make_global_tables(p2d->g);
 	if(p2d->color_correction_enabled) {
-		p2d->linear_to_srgb_table = p2d->g->linear_to_srgb_table;
+		p2d->linear_to_srgb255_table = p2d->g->linear_to_srgb255_table;
 	}
 	else {
-		p2d->linear_to_srgb_table = p2d->g->identity255_table;
+		p2d->linear_to_srgb255_table = p2d->g->identity255_table;
 	}
 
-	p2d->src_to_linear_table = (double*)malloc(256*sizeof(double));
-	if(!p2d->src_to_linear_table) return 0;
+	p2d->src255_to_linear_table = (double*)malloc(256*sizeof(double));
+	if(!p2d->src255_to_linear_table) return 0;
 
-	p2d->src_to_dst_table = (p2d_byte*)malloc(256*sizeof(p2d_byte));
-	if(!p2d->src_to_dst_table) return 0;
+	p2d->src255_to_srgb255_table = (p2d_byte*)malloc(256*sizeof(p2d_byte));
+	if(!p2d->src255_to_srgb255_table) return 0;
 
 	for(n=0;n<256;n++) {
 		val_src = ((double)n)/255.0;
@@ -418,15 +402,15 @@ static int p2d_make_color_correction_tables(P2D *p2d)
 			}
 
 			// TODO: This is only needed if there is partial transparency.
-			p2d->src_to_linear_table[n] = val_linear;
+			p2d->src255_to_linear_table[n] = val_linear;
 			
 			val_dst = linear_to_srgb_sample(val_linear);
-			p2d->src_to_dst_table[n] = (p2d_byte)(0.5+val_dst*255.0);
+			p2d->src255_to_srgb255_table[n] = (p2d_byte)(0.5+val_dst*255.0);
 		}
 		else {
 			// "dummy" tables
-			p2d->src_to_linear_table[n] = val_src;
-			p2d->src_to_dst_table[n] = n;
+			p2d->src255_to_linear_table[n] = val_src;
+			p2d->src255_to_srgb255_table[n] = n;
 		}
 	}
 	return 1;
@@ -451,7 +435,7 @@ static int decode_strategy_8bit_direct(P2D *p2d, int samples_per_pixel, int colo
 
 		for(j=0;j<p2d->height;j++) {
 			for(i=0;i<samples_per_row;i++) {
-				p2d->dib_row_pointers[j][i] = p2d->src_to_dst_table[p2d->dib_row_pointers[j][i]];
+				p2d->dib_row_pointers[j][i] = p2d->src255_to_srgb255_table[p2d->dib_row_pointers[j][i]];
 			}
 		}
 	}
@@ -483,14 +467,14 @@ static int decode_strategy_rgba(P2D *p2d)
 			a = ((double)pngrowpointers[j][i*4+3])/255.0;
 
 			for(k=0;k<3;k++) {
-				lsample = src255_to_linear_sample(p2d,pngrowpointers[j][i*4+k]);
+				lsample = p2d->src255_to_linear_table[pngrowpointers[j][i*4+k]];
 				bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[k];
 
 				// TODO: This is not perfect.
 				// Instead of quantizing to the nearest linear color and then converting it to sRGB,
 				// we should use the quantized sRGB color that is nearest in a linear
 				// colorspace. There's no easy and efficient way to do that, though.
-				p2d->dib_row_pointers[j][i*3+2-k] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bsample*255.0)];
+				p2d->dib_row_pointers[j][i*3+2-k] = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+bsample*255.0)];
 			}
 		}
 	}
@@ -524,18 +508,18 @@ static int decode_strategy_graya(P2D *p2d, int tocolor)
 
 	for(j=0;j<p2d->height;j++) {
 		for(i=0;i<p2d->width;i++) {
-			lsample = src255_to_linear_sample(p2d,pngrowpointers[j][i*2]);
+			lsample = p2d->src255_to_linear_table[pngrowpointers[j][i*2]];
 			a = ((double)pngrowpointers[j][i*2+1])/255.0;
 
 			if(tocolor) {
 				for(k=0;k<3;k++) {
 					bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[k];
-					p2d->dib_row_pointers[j][i*3+2-k] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bsample*255.0)];
+					p2d->dib_row_pointers[j][i*3+2-k] = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+bsample*255.0)];
 				}
 			}
 			else {
 				bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
-				p2d->dib_row_pointers[j][i] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bsample*255.0)];
+				p2d->dib_row_pointers[j][i] = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+bsample*255.0)];
 			}
 		}
 	}
@@ -567,9 +551,9 @@ static int decode_strategy_palette(P2D *p2d)
 	// Copy the PNG palette to the DIB palette, handling color correction
 	// and transparency in the process.
 	for(i=0;i<p2d->dib_palette_entries;i++) {
-		lcolor.sm[P2D_SM_R] = src255_to_linear_sample(p2d,p2d->pngf_palette[i].red);
-		lcolor.sm[P2D_SM_G] = src255_to_linear_sample(p2d,p2d->pngf_palette[i].green);
-		lcolor.sm[P2D_SM_B] = src255_to_linear_sample(p2d,p2d->pngf_palette[i].blue);
+		lcolor.sm[P2D_SM_R] = p2d->src255_to_linear_table[p2d->pngf_palette[i].red];
+		lcolor.sm[P2D_SM_G] = p2d->src255_to_linear_table[p2d->pngf_palette[i].green];
+		lcolor.sm[P2D_SM_B] = p2d->src255_to_linear_table[p2d->pngf_palette[i].blue];
 
 		// Apply background color
 		if(i < num_trans) {
@@ -579,9 +563,9 @@ static int decode_strategy_palette(P2D *p2d)
 			}
 		}
 
-		p2d->dib_palette[i].rgbRed   = p2d->linear_to_srgb_table[(p2d_byte)(0.5+lcolor.sm[P2D_SM_R]*255.0)];
-		p2d->dib_palette[i].rgbGreen = p2d->linear_to_srgb_table[(p2d_byte)(0.5+lcolor.sm[P2D_SM_G]*255.0)];
-		p2d->dib_palette[i].rgbBlue  = p2d->linear_to_srgb_table[(p2d_byte)(0.5+lcolor.sm[P2D_SM_B]*255.0)];
+		p2d->dib_palette[i].rgbRed   = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+lcolor.sm[P2D_SM_R]*255.0)];
+		p2d->dib_palette[i].rgbGreen = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+lcolor.sm[P2D_SM_G]*255.0)];
+		p2d->dib_palette[i].rgbBlue  = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+lcolor.sm[P2D_SM_B]*255.0)];
 	}
 
 	// Directly read the image into the DIB.
@@ -957,8 +941,8 @@ int p2d_run(P2D *p2d)
 
 done:
 
-	if(p2d->src_to_dst_table) free(p2d->src_to_dst_table);
-	if(p2d->src_to_linear_table) free(p2d->src_to_linear_table);
+	if(p2d->src255_to_srgb255_table) free(p2d->src255_to_srgb255_table);
+	if(p2d->src255_to_linear_table) free(p2d->src255_to_linear_table);
 
 	if(p2d->png_ptr) png_destroy_read_struct(&p2d->png_ptr, &p2d->info_ptr, (png_infopp)NULL);
 	if(p2d->dib_row_pointers) free((void*)p2d->dib_row_pointers);
@@ -1106,7 +1090,7 @@ struct p2d_globals_struct *p2d_create_globals(void)
 void p2d_destroy_globals(struct p2d_globals_struct *g)
 {
 	if(g) {
-		if(g->linear_to_srgb_table) free((void*)g->linear_to_srgb_table);
+		if(g->linear_to_srgb255_table) free((void*)g->linear_to_srgb255_table);
 		if(g->identity255_table) free((void*)g->identity255_table);
 		free((void*)g);
 	}
