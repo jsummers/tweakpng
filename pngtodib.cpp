@@ -213,6 +213,7 @@ static void p2d_read_bgcolor(P2D *p2d)
 	png_color_16p bg_colorp;
 	p2d_byte tmpcolor;
 	int has_bkgd;
+	int k;
 
 	if(!p2d->use_file_bg_flag) {
 		// Using the background from the file is disabled.
@@ -254,13 +255,10 @@ static void p2d_read_bgcolor(P2D *p2d)
 
 	if(!p2d->bkgd_color_applied_flag) return;
 
-	p2d->bkgd_color_applied_linear.sm[P2D_SM_R] = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_R]);
-	p2d->bkgd_color_applied_linear.sm[P2D_SM_G] = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_G]);
-	p2d->bkgd_color_applied_linear.sm[P2D_SM_B] = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_B]);
-
-	p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R] = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_R]);
-	p2d->bkgd_color_applied_srgb.sm255[P2D_SM_G] = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_G]);
-	p2d->bkgd_color_applied_srgb.sm255[P2D_SM_B] = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.sm255[P2D_SM_B]);
+	for(k=0;k<3;k++) {
+		p2d->bkgd_color_applied_linear.sm[k] = src255_to_linear_sample(p2d,p2d->bkgd_color_applied_src.sm255[k]);
+		p2d->bkgd_color_applied_srgb.sm255[k] = src255_to_srgb255_sample(p2d,p2d->bkgd_color_applied_src.sm255[k]);
+	}
 }
 
 static void p2d_read_gamma(P2D *p2d)
@@ -465,9 +463,10 @@ static int decode_strategy_rgba(P2D *p2d)
 	size_t i, j;
 	p2d_byte *pngimage = NULL;
 	p2d_byte **pngrowpointers = NULL;
-	struct p2d_color_fltpt_struct lcolor; // linear sample values
+	double lsample; // linear sample value;
+	double bsample; // linear sample, composited with background color
 	double a; // alpha value
-	struct p2d_color_fltpt_struct bcolor; // linear samples, composited with background color
+	int k;
 
 	pngimage = (p2d_byte*)malloc(4*p2d->width*p2d->height);
 	if(!pngimage) goto done;
@@ -481,22 +480,18 @@ static int decode_strategy_rgba(P2D *p2d)
 
 	for(j=0;j<p2d->height;j++) {
 		for(i=0;i<p2d->width;i++) {
-			lcolor.sm[P2D_SM_R] = src255_to_linear_sample(p2d,pngrowpointers[j][i*4+0]);
-			lcolor.sm[P2D_SM_G] = src255_to_linear_sample(p2d,pngrowpointers[j][i*4+1]);
-			lcolor.sm[P2D_SM_B] = src255_to_linear_sample(p2d,pngrowpointers[j][i*4+2]);
 			a = ((double)pngrowpointers[j][i*4+3])/255.0;
 
-			bcolor.sm[P2D_SM_R] = a*lcolor.sm[P2D_SM_R] + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
-			bcolor.sm[P2D_SM_G] = a*lcolor.sm[P2D_SM_G] + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_G];
-			bcolor.sm[P2D_SM_B] = a*lcolor.sm[P2D_SM_B] + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_B];
+			for(k=0;k<3;k++) {
+				lsample = src255_to_linear_sample(p2d,pngrowpointers[j][i*4+k]);
+				bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[k];
 
-			// TODO: This is not perfect.
-			// Instead of quantizing to the nearest linear color and then converting it to sRGB,
-			// we should use the quantized sRGB color that is nearest in a linear
-			// colorspace. There's no easy and efficient way to do that, though.
-			p2d->dib_row_pointers[j][i*3+0] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bcolor.sm[P2D_SM_B]*255.0)];
-			p2d->dib_row_pointers[j][i*3+1] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bcolor.sm[P2D_SM_G]*255.0)];
-			p2d->dib_row_pointers[j][i*3+2] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bcolor.sm[P2D_SM_R]*255.0)];
+				// TODO: This is not perfect.
+				// Instead of quantizing to the nearest linear color and then converting it to sRGB,
+				// we should use the quantized sRGB color that is nearest in a linear
+				// colorspace. There's no easy and efficient way to do that, though.
+				p2d->dib_row_pointers[j][i*3+2-k] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bsample*255.0)];
+			}
 		}
 	}
 
@@ -512,10 +507,10 @@ static int decode_strategy_graya(P2D *p2d, int tocolor)
 	size_t i, j;
 	p2d_byte *pngimage = NULL;
 	p2d_byte **pngrowpointers = NULL;
-	double g; // linear gray sample
+	double lsample; // linear gray sample
+	double bsample; // linear sample, composited with background color
 	double a; // alpha value
-	struct p2d_color_fltpt_struct bcolor; // linear color samples, composited with background color
-	double bcolor_gray; // linear gray sample, composited with background color
+	int k;
 
 	pngimage = (p2d_byte*)malloc(2*p2d->width*p2d->height);
 	if(!pngimage) goto done;
@@ -529,20 +524,18 @@ static int decode_strategy_graya(P2D *p2d, int tocolor)
 
 	for(j=0;j<p2d->height;j++) {
 		for(i=0;i<p2d->width;i++) {
-			g = src255_to_linear_sample(p2d,pngrowpointers[j][i*2]);
+			lsample = src255_to_linear_sample(p2d,pngrowpointers[j][i*2]);
 			a = ((double)pngrowpointers[j][i*2+1])/255.0;
 
 			if(tocolor) {
-				bcolor.sm[P2D_SM_R] = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
-				bcolor.sm[P2D_SM_G] = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_G];
-				bcolor.sm[P2D_SM_B] = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_B];
-				p2d->dib_row_pointers[j][i*3+0] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bcolor.sm[P2D_SM_B]*255.0)];
-				p2d->dib_row_pointers[j][i*3+1] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bcolor.sm[P2D_SM_G]*255.0)];
-				p2d->dib_row_pointers[j][i*3+2] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bcolor.sm[P2D_SM_R]*255.0)];
+				for(k=0;k<3;k++) {
+					bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[k];
+					p2d->dib_row_pointers[j][i*3+2-k] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bsample*255.0)];
+				}
 			}
 			else {
-				bcolor_gray  = a*g + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
-				p2d->dib_row_pointers[j][i] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bcolor_gray*255.0)];
+				bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
+				p2d->dib_row_pointers[j][i] = p2d->linear_to_srgb_table[(p2d_byte)(0.5+bsample*255.0)];
 			}
 		}
 	}
@@ -562,6 +555,7 @@ static int decode_strategy_palette(P2D *p2d)
 	int num_trans;
 	struct p2d_color_fltpt_struct lcolor;
 	double trns_alpha_1;
+	int k;
 
 	// Copy the PNG palette to the DIB palette
 	if(p2d->pngf_palette_entries != p2d->dib_palette_entries) return 0;
@@ -580,9 +574,9 @@ static int decode_strategy_palette(P2D *p2d)
 		// Apply background color
 		if(i < num_trans) {
 			trns_alpha_1 = ((double)trans_alpha[i])/255.0;
-			lcolor.sm[P2D_SM_R] = trns_alpha_1*lcolor.sm[P2D_SM_R] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
-			lcolor.sm[P2D_SM_G] = trns_alpha_1*lcolor.sm[P2D_SM_G] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.sm[P2D_SM_G];
-			lcolor.sm[P2D_SM_B] = trns_alpha_1*lcolor.sm[P2D_SM_B] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.sm[P2D_SM_B];
+			for(k=0;k<3;k++) {
+				lcolor.sm[k] = trns_alpha_1*lcolor.sm[k] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.sm[k];
+			}
 		}
 
 		p2d->dib_palette[i].rgbRed   = p2d->linear_to_srgb_table[(p2d_byte)(0.5+lcolor.sm[P2D_SM_R]*255.0)];
@@ -664,6 +658,7 @@ int p2d_run(P2D *p2d)
 	int strategy_colorcorrect=1;
 	int bg_is_gray;
 	int has_trns = 0;
+	int k;
 
 	retval=PNGD_E_ERROR;
 	p2d->png_ptr=NULL;
@@ -687,14 +682,14 @@ int p2d_run(P2D *p2d)
 	if(p2d->color_correction_enabled) {
 		// Also store the custom background color in a linear colorspace, since that's
 		// what we'll need if we have to apply it to the image.
-		p2d->bkgd_color_applied_linear.sm[P2D_SM_R] = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R])/255.0);
-		p2d->bkgd_color_applied_linear.sm[P2D_SM_G] = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_G])/255.0);
-		p2d->bkgd_color_applied_linear.sm[P2D_SM_B] = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_B])/255.0);
+		for(k=0;k<3;k++) {
+			p2d->bkgd_color_applied_linear.sm[k] = srgb_to_linear_sample(((double)p2d->bkgd_color_applied_srgb.sm255[k])/255.0);
+		}
 	}
 	else {
-		p2d->bkgd_color_applied_linear.sm[P2D_SM_R] = ((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R])/255.0;
-		p2d->bkgd_color_applied_linear.sm[P2D_SM_G] = ((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_G])/255.0;
-		p2d->bkgd_color_applied_linear.sm[P2D_SM_B] = ((double)p2d->bkgd_color_applied_srgb.sm255[P2D_SM_B])/255.0;
+		for(k=0;k<3;k++) {
+			p2d->bkgd_color_applied_linear.sm[k] = ((double)p2d->bkgd_color_applied_srgb.sm255[k])/255.0;
+		}
 	}
 
 
