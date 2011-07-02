@@ -247,8 +247,8 @@ void Viewer::Update(Png *png1)
 		m_errorflag=1;
 		goto abort;
 	}
-	rv=p2d_get_dib(p2d,&m_dib,NULL);
-	rv=p2d_get_dibbits(p2d, &m_bits, NULL, NULL);
+	rv=p2d_get_dib(p2d,&m_dib);
+	rv=p2d_get_dibbits(p2d, &m_bits);
 
 	m_adjwidth = m_dib->biWidth;
 	m_adjheight = m_dib->biHeight;
@@ -287,7 +287,7 @@ abort:
 void Viewer::FreeImage()
 {
 	if(m_dib) {
-		p2d_free_dib(NULL,m_dib);
+		p2d_free_dib(m_dib);
 		m_dib=NULL;
 		m_bits=NULL;
 		m_errorflag=0;

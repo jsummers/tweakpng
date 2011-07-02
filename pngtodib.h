@@ -25,11 +25,11 @@ void p2d_set_use_file_bg(P2D *p2d, int flag);
 void p2d_set_custom_bg(P2D *p2d, p2d_byte r, p2d_byte g, p2d_byte b);
 void p2d_enable_color_correction(P2D *p2d, int flag);
 int  p2d_run(P2D *p2d);
-int  p2d_get_dib(P2D *p2d, BITMAPINFOHEADER **ppdib, int *pdibsize);
-int  p2d_get_dibbits(P2D *p2d, void **ppbits, int *pbitsoffset, int *pbitssize);
+int  p2d_get_dib(P2D *p2d, BITMAPINFOHEADER **ppdib);
+int  p2d_get_dibbits(P2D *p2d, void **ppbits);
 int  p2d_get_density(P2D *p2d, int *pres_x, int *pres_y, int *pres_units);
 int  p2d_get_bgcolor(P2D *p2d, p2d_byte *pr, p2d_byte *pg, p2d_byte *pb);
-void p2d_free_dib(P2D *p2d, BITMAPINFOHEADER *pdib);
+void p2d_free_dib(BITMAPINFOHEADER *pdib);
 
 P2D* p2d_init(struct p2d_globals_struct *g);
 

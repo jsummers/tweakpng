@@ -75,12 +75,9 @@ struct p2d_struct {
 	int color_correction_enabled;
 	int handle_trans; // Do we need to apply a background color?
 
-	BITMAPINFOHEADER*   pdib;
-	int        dibsize;
-	int        bits_offs;
-	int        bitssize;
-	RGBQUAD*   palette;
-	void*      pbits;
+	BITMAPINFOHEADER*  dib_header;
+	RGBQUAD*   dib_palette;
+	p2d_byte*  dib_bits;
 	int        res_x,res_y;
 	int        res_units;
 	int        res_valid;  // are res_x, res_y, res_units valid?
@@ -90,9 +87,7 @@ struct p2d_struct {
 
 	int is_grayscale;
 	int pngf_bit_depth;
-	int has_trns;
 	int color_type;
-	int manual_trns;
 
 	// Color information about the source image. The destination image is always sRGB.
 	int color_correction_type; // P2D_CC_*
@@ -298,10 +293,9 @@ static void p2d_make_gray_palette(P2D *p2d)
 			v=src255_to_srgb255_sample(p2d,i*mult);
 		else
 			v=i*mult;
-		p2d->palette[i].rgbRed = v;
-		p2d->palette[i].rgbGreen = v;
-		p2d->palette[i].rgbBlue = v;
-		p2d->palette[i].rgbReserved = 0;
+		p2d->dib_palette[i].rgbRed = v;
+		p2d->dib_palette[i].rgbGreen = v;
+		p2d->dib_palette[i].rgbBlue = v;
 	}
 }
 
@@ -575,10 +569,9 @@ static int decode_strategy_palette(P2D *p2d)
 			sm[2] = trns_alpha_1*sm[2] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.blue;
 		}
 
-		p2d->palette[i].rgbRed   = p2d->linear_to_srgb_table[(p2d_byte)(0.5+sm[0]*255.0)];
-		p2d->palette[i].rgbGreen = p2d->linear_to_srgb_table[(p2d_byte)(0.5+sm[1]*255.0)];
-		p2d->palette[i].rgbBlue  = p2d->linear_to_srgb_table[(p2d_byte)(0.5+sm[2]*255.0)];
-		p2d->palette[i].rgbReserved = 0;
+		p2d->dib_palette[i].rgbRed   = p2d->linear_to_srgb_table[(p2d_byte)(0.5+sm[0]*255.0)];
+		p2d->dib_palette[i].rgbGreen = p2d->linear_to_srgb_table[(p2d_byte)(0.5+sm[1]*255.0)];
+		p2d->dib_palette[i].rgbBlue  = p2d->linear_to_srgb_table[(p2d_byte)(0.5+sm[2]*255.0)];
 	}
 
 	// Directly read the image into the DIB.
@@ -616,9 +609,9 @@ static int decode_strategy_gray_to_pal(P2D *p2d)
 		// to the background color.
 		png_get_tRNS(p2d->png_ptr, p2d->info_ptr, &trans_alpha, &num_trans, &trans_color);
 		if(trans_color->gray>=0 && trans_color->gray<p2d->dib_palette_entries) {
-			p2d->palette[trans_color->gray].rgbRed   = p2d->bkgd_color_applied_srgb.red;
-			p2d->palette[trans_color->gray].rgbGreen = p2d->bkgd_color_applied_srgb.green;
-			p2d->palette[trans_color->gray].rgbBlue  = p2d->bkgd_color_applied_srgb.blue;
+			p2d->dib_palette[trans_color->gray].rgbRed   = p2d->bkgd_color_applied_srgb.red;
+			p2d->dib_palette[trans_color->gray].rgbGreen = p2d->bkgd_color_applied_srgb.green;
+			p2d->dib_palette[trans_color->gray].rgbBlue  = p2d->bkgd_color_applied_srgb.blue;
 		}
 	}
 
@@ -640,13 +633,13 @@ int p2d_run(P2D *p2d)
 	jmp_buf jbuf;
 	struct errstruct errinfo;
 	int interlace_type;
-	p2d_byte *lpdib;
-	p2d_byte *dib_palette;
-	p2d_byte *dib_bits;
+	size_t dib_size;
+	size_t dib_palette_offs;
+	size_t dib_bits_offs;
+	size_t dib_bits_size;
 	int dib_bpp, dib_bytesperrow;
 	int j;
 	int retval;
-	size_t palette_offs;
 	enum p2d_strategy { P2D_ST_NONE, P2D_ST_8BIT_DIRECT, P2D_ST_RGBA, P2D_ST_GRAYA,
 	  P2D_ST_PALETTE, P2D_ST_GRAY_TO_PAL };
 	enum p2d_strategy decode_strategy;
@@ -654,14 +647,12 @@ int p2d_run(P2D *p2d)
 	int strategy_tocolor=0;
 	int strategy_colorcorrect=1;
 	int bg_is_gray;
+	int has_trns = 0;
 
-	p2d->manual_trns=0;
-	p2d->has_trns=0;
 	retval=PNGD_E_ERROR;
 	p2d->png_ptr=NULL;
 	p2d->info_ptr=NULL;
 	p2d->dib_row_pointers=NULL;
-	lpdib=NULL;
 	decode_strategy= P2D_ST_NONE;
 
 	StringCchCopy(p2d->errmsg,P2D_ERRMSG_MAX,_T(""));
@@ -738,7 +729,7 @@ int p2d_run(P2D *p2d)
 
 	p2d->is_grayscale = !(p2d->color_type&PNG_COLOR_MASK_COLOR);
 
-	p2d->has_trns = png_get_valid(p2d->png_ptr,p2d->info_ptr,PNG_INFO_tRNS);
+	has_trns = png_get_valid(p2d->png_ptr,p2d->info_ptr,PNG_INFO_tRNS);
 
 	p2d_read_gamma(p2d);
 
@@ -749,7 +740,7 @@ int p2d_run(P2D *p2d)
 	p2d_read_density(p2d);
 
 	if(p2d->bkgd_color_applied_flag) {
-		if(p2d->has_trns || (p2d->color_type & PNG_COLOR_MASK_ALPHA)) {
+		if(has_trns || (p2d->color_type & PNG_COLOR_MASK_ALPHA)) {
 			p2d->handle_trans=1;
 		}
 	}
@@ -879,29 +870,18 @@ int p2d_run(P2D *p2d)
 	//////// Calculate the size of the DIB, and allocate memory for it.
 
 	// DIB scanlines are padded to 4-byte boundaries.
-	dib_bytesperrow= (((p2d->width * dib_bpp)+31)/32)*4;
+	dib_bytesperrow = (((p2d->width * dib_bpp)+31)/32)*4;
 
-	p2d->bitssize = p2d->height*dib_bytesperrow;
+	dib_palette_offs = sizeof(BITMAPINFOHEADER);
+	dib_bits_offs = dib_palette_offs + 4*p2d->dib_palette_entries;
+	dib_bits_size = p2d->height*dib_bytesperrow;
+	dib_size = dib_bits_offs + dib_bits_size;
 
-	p2d->dibsize=sizeof(BITMAPINFOHEADER) + 4*p2d->dib_palette_entries + p2d->bitssize;
+	p2d->dib_header = (LPBITMAPINFOHEADER)calloc(1,dib_size);
+	if(!p2d->dib_header) { retval=PNGD_E_NOMEM; goto done; }
 
-	lpdib = (p2d_byte*)calloc(p2d->dibsize,1);
-
-	if(!lpdib) { retval=PNGD_E_NOMEM; goto done; }
-	p2d->pdib = (LPBITMAPINFOHEADER)lpdib;
-
-	////////
-
-	// TODO: Clean this up.
-	palette_offs=sizeof(BITMAPINFOHEADER);
-	p2d->bits_offs   =sizeof(BITMAPINFOHEADER) + 4*p2d->dib_palette_entries;
-	dib_palette= &lpdib[palette_offs];
-	p2d->palette= (RGBQUAD*)dib_palette;
-	dib_bits   = &lpdib[p2d->bits_offs];
-	p2d->pbits = (VOID*)dib_bits;
-
-	//////// Copy the PNG palette to the DIB palette,
-	//////// or create the DIB palette.
+	p2d->dib_palette = (RGBQUAD*)&((p2d_byte*)p2d->dib_header)[dib_palette_offs];
+	p2d->dib_bits = &((p2d_byte*)p2d->dib_header)[dib_bits_offs];
 
 	if(p2d->need_gray_palette) {
 		p2d_make_gray_palette(p2d);
@@ -913,7 +893,7 @@ int p2d_run(P2D *p2d)
 	if(!p2d->dib_row_pointers) { retval=PNGD_E_NOMEM; goto done; }
 
 	for(j=0;j<(int)p2d->height;j++) {
-		p2d->dib_row_pointers[p2d->height-1-j]= &dib_bits[j*dib_bytesperrow];
+		p2d->dib_row_pointers[p2d->height-1-j]= &p2d->dib_bits[j*dib_bytesperrow];
 	}
 
 	//////// Read the PNG image into our DIB memory structure.
@@ -941,26 +921,26 @@ int p2d_run(P2D *p2d)
 	png_read_end(p2d->png_ptr, p2d->info_ptr);
 
 	// fill in the DIB header fields
-	p2d->pdib->biSize=          sizeof(BITMAPINFOHEADER);
-	p2d->pdib->biWidth=         p2d->width;
-	p2d->pdib->biHeight=        p2d->height;
-	p2d->pdib->biPlanes=        1;
-	p2d->pdib->biBitCount=      dib_bpp;
-	p2d->pdib->biCompression=   BI_RGB;
+	p2d->dib_header->biSize=          sizeof(BITMAPINFOHEADER);
+	p2d->dib_header->biWidth=         p2d->width;
+	p2d->dib_header->biHeight=        p2d->height;
+	p2d->dib_header->biPlanes=        1;
+	p2d->dib_header->biBitCount=      dib_bpp;
+	p2d->dib_header->biCompression=   BI_RGB;
 	// biSizeImage can also be 0 in uncompressed bitmaps
-	p2d->pdib->biSizeImage=     p2d->height*dib_bytesperrow;
+	p2d->dib_header->biSizeImage=     p2d->height*dib_bytesperrow;
 
 	if(p2d->res_valid) {
-		p2d->pdib->biXPelsPerMeter= p2d->res_x;
-		p2d->pdib->biYPelsPerMeter= p2d->res_y;
+		p2d->dib_header->biXPelsPerMeter= p2d->res_x;
+		p2d->dib_header->biYPelsPerMeter= p2d->res_y;
 	}
 	else {
-		p2d->pdib->biXPelsPerMeter= 72;
-		p2d->pdib->biYPelsPerMeter= 72;
+		p2d->dib_header->biXPelsPerMeter= 72;
+		p2d->dib_header->biYPelsPerMeter= 72;
 	}
 
-	p2d->pdib->biClrUsed=       p2d->dib_palette_entries;
-	p2d->pdib->biClrImportant=  0;
+	p2d->dib_header->biClrUsed=       p2d->dib_palette_entries;
+	p2d->dib_header->biClrImportant=  0;
 
 	retval = PNGD_E_SUCCESS;
 
@@ -973,8 +953,8 @@ done:
 	if(p2d->dib_row_pointers) free((void*)p2d->dib_row_pointers);
 
 	if(retval!=PNGD_E_SUCCESS) {
-		if(lpdib) {
-			p2d_free_dib(p2d,NULL);
+		if(p2d->dib_header) {
+			p2d_free_dib(p2d->dib_header);
 		}
 
 		// If we don't have an error message yet, use a
@@ -987,22 +967,9 @@ done:
 	return retval;
 }
 
-void p2d_free_dib(P2D *p2d, BITMAPINFOHEADER* pdib)
+void p2d_free_dib(BITMAPINFOHEADER* pdib)
 {
-	if(!p2d) {
-		if(pdib) free((void*)pdib);
-		return;
-	}
-
-	if(!pdib) {
-		// DIB not explicitly given; use the one from the P2D object.
-		// (this is the normal case)
-		pdib = p2d->pdib;
-		p2d->pdib = NULL;
-	}
-	if(pdib) {
-		free((void*)pdib);
-	}
+	if(pdib) free((void*)pdib);
 }
 
 P2D* p2d_init(struct p2d_globals_struct *g)
@@ -1010,7 +977,7 @@ P2D* p2d_init(struct p2d_globals_struct *g)
 	struct p2d_struct *p2d;
 
 	if(!g) return NULL;
-	p2d = (struct p2d_struct *)calloc(sizeof(struct p2d_struct),1);
+	p2d = (struct p2d_struct *)calloc(1,sizeof(struct p2d_struct));
 
 	if(p2d) {
 		p2d->g = g;
@@ -1072,19 +1039,15 @@ void p2d_enable_color_correction(P2D *p2d, int flag)
 	p2d->color_correction_enabled = flag;
 }
 
-int p2d_get_dib(P2D *p2d,
-   BITMAPINFOHEADER **ppdib, int *pdibsize)
+int p2d_get_dib(P2D *p2d, BITMAPINFOHEADER **ppdib)
 {
-	*ppdib = p2d->pdib;
-	if(pdibsize) *pdibsize = p2d->dibsize;
+	*ppdib = p2d->dib_header;
 	return 1;
 }	
 
-int p2d_get_dibbits(P2D *p2d, void **ppbits, int *pbitsoffset, int *pbitssize)
+int p2d_get_dibbits(P2D *p2d, void **ppbits)
 {
-	*ppbits = p2d->pbits;
-	if(pbitsoffset) *pbitsoffset = p2d->bits_offs;
-	if(pbitssize) *pbitssize = p2d->bitssize;
+	*ppbits = p2d->dib_bits;
 	return 1;
 }
 
