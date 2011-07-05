@@ -870,7 +870,7 @@ void Chunk::describe_IHDR(TCHAR *buf, int buflen)
 	TCHAR buf2[500];
 	if(msg_if_invalid_length(buf,buflen,_T("PNG image header"))) return;
 
-	StringCchPrintf(buf,buflen,_T("PNG image header: %u%s%u"),read_int32(&data[0]),globals.timessym,read_int32(&data[4]));
+	StringCchPrintf(buf,buflen,_T("PNG image header: %u%s%u"),read_int32(&data[0]),SYM_TIMES,read_int32(&data[4]));
 	StringCchPrintf(buf2,500,_T(", %u bit%s/%s"),(DWORD)(data[8]),(data[8]==1)?_T(""):_T("s"),
 		(data[9]==3)?_T("pixel"):_T("sample"));
 	StringCchCat(buf,buflen,buf2);
@@ -1114,12 +1114,12 @@ void Chunk::describe_pHYs(TCHAR *buf, int buflen)
 	x=read_int32(&data[0]);
 	y=read_int32(&data[4]);
 
-	StringCchPrintf(buf,buflen,_T("pixel size = %u%s%u pixels"),x,globals.timessym,y);
+	StringCchPrintf(buf,buflen,_T("pixel size = %u%s%u pixels"),x,SYM_TIMES,y);
 
 	switch(data[8]) {
 	case 0: StringCchCat(buf,buflen,_T(" (per unspecified unit)")); break;
 	case 1:
-		StringCchPrintf(s,80,_T(" per meter (%.1f%s%.1f dpi)"),(double)x * 0.0254,globals.timessym,(double)y * 0.0254);
+		StringCchPrintf(s,80,_T(" per meter (%.1f%s%.1f dpi)"),(double)x * 0.0254,SYM_TIMES,(double)y * 0.0254);
 		StringCchCat(buf,buflen,s);
 		break;
 	default: StringCchCat(buf,buflen,_T(" per (unrecognized unit)"));
@@ -1177,7 +1177,7 @@ void Chunk::describe_fcTL(TCHAR *buf, int buflen)
 	}
 
 	StringCchPrintf(buf,buflen,_T("APNG frame control, seq#=%d, %d%s%d+%d+%d, delay=%.3fs, dispose=%s, blend=%s"),
-		seq,width,globals.timessym,height,xoffs,yoffs,delay,dispose_op,blend_op);
+		seq,width,SYM_TIMES,height,xoffs,yoffs,delay,dispose_op,blend_op);
 }
 
 void Chunk::describe_fdAT(TCHAR *buf, int buflen)
@@ -1207,7 +1207,7 @@ void Chunk::describe_oFFs(TCHAR *buf, int buflen)
 
 	switch(data[8]) {
 	case 0: StringCchCat(buf,buflen,_T("pixels")); break;
-	case 1: StringCchCat(buf,buflen,globals.micrometersym); break;
+	case 1: StringCchCat(buf,buflen,SYM_MICROMETERS); break;
 	default: StringCchCat(buf,buflen,_T("(invalid units)"));
 	}
 }
@@ -1330,7 +1330,7 @@ void Chunk::describe_sCAL(TCHAR *buf, int buflen)
 	else unitsstring=_T("unknown units");
 
 	StringCchPrintf(buf,buflen,_T("physical scale of image subject: %s%s%s %s"),
-		d.x,globals.timessym,d.y,unitsstring);
+		d.x,SYM_TIMES,d.y,unitsstring);
 }
 
 // keyword and indata must be null-terminated
@@ -2221,7 +2221,7 @@ static void phys_calc_inches(HWND hwnd)
 	xinches = ((double)x)*0.0254;
 	yinches = ((double)y)*0.0254;
 
-	StringCchPrintf(buf,200,_T("= %.2f %s %.2f pixels/inch"),xinches,globals.timessym,yinches);
+	StringCchPrintf(buf,200,_T("= %.2f %s %.2f pixels/inch"),xinches,SYM_TIMES,yinches);
 	SetDlgItemText(hwnd,IDC_ININCHES,buf);
 }
 

@@ -1136,18 +1136,9 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdL
 
 #ifdef UNICODE
 	globals.unicode_supported=1;
-	globals.copyrightsym = _T("\xa9");
-	globals.timessym = _T("\xd7");
-	globals.micrometersym = _T("\x3bcm");
-	globals.middotsym = _T("\xb7");
 #else
-	globals.copyrightsym = _T("(c)");
-	globals.timessym = _T("x");
-	globals.micrometersym = _T("micrometers");
-	globals.middotsym = _T("-");
 	globals.unicode_supported=0;
 #endif
-
 
 #ifdef TWPNG_HAVE_ZLIB
 	globals.zlib_available=1;
@@ -2939,24 +2930,24 @@ static void twpng_HandleAboutInitDialog(HWND hwnd)
 	TCHAR buf2[200];
 
 	StringCbPrintf(buf1,sizeof(buf1),_T("Version %s %s %s %s %d-bit"),TWEAKPNG_VER_STRING,
-		globals.middotsym,_T(__DATE__),globals.middotsym,(int)(sizeof(void*)*8));
+		SYM_MIDDOT,_T(__DATE__),SYM_MIDDOT,(int)(sizeof(void*)*8));
 
-	//StringCbPrintf(buf2,sizeof(buf2),_T(" %s %s"),globals.middotsym,_T(__DATE__));
+	//StringCbPrintf(buf2,sizeof(buf2),_T(" %s %s"),SYM_MIDDOT,_T(__DATE__));
 	//StringCbCat(buf1,sizeof(buf1),buf2);
 
 #ifndef UNICODE
-	StringCbPrintf(buf2,sizeof(buf2),_T(" %s non-Unicode"),globals.middotsym);
+	StringCbPrintf(buf2,sizeof(buf2),_T(" %s non-Unicode"),SYM_MIDDOT);
 	StringCbCat(buf1,sizeof(buf1),buf2);
 #endif
 #ifdef _DEBUG
-	StringCbPrintf(buf2,sizeof(buf2),_T(" %s Debug build"),globals.middotsym);
+	StringCbPrintf(buf2,sizeof(buf2),_T(" %s Debug build"),SYM_MIDDOT);
 	StringCbCat(buf1,sizeof(buf1),buf2);
 #endif
 
 	StringCchPrintf(buf,4000,_T("TweakPNG %s A PNG image file manipulation utility\r\n\r\n%s\r\n")
-		_T("Copyright %s %s by Jason Summers\r\nWebsite: %s\r\n"),
-		globals.middotsym,buf1,
-		globals.copyrightsym,TWEAKPNG_COPYRIGHT_DATE,globals.twpng_homepage);
+		_T("Copyright ") SYM_COPYRIGHT _T(" %s by Jason Summers\r\nWebsite: %s\r\n"),
+		SYM_MIDDOT,buf1,
+		TWEAKPNG_COPYRIGHT_DATE,globals.twpng_homepage);
 
 	StringCchCat(buf,4000,_T("\r\nThis program is distributed under the terms ")
 		_T("of the GNU General Public License, version 3 or higher. Please read the file tweakpng.txt for more information.\r\n"));

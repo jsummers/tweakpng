@@ -7,6 +7,18 @@
 #define TWEAKPNG_COPYRIGHT_DATE  _T("1999-2011")
 #define TWEAKPNG_HOMEPAGE        _T("http://entropymine.com/jason/tweakpng/")
 
+// Symbols, characters, etc., that are different when Unicode is disabled.
+#ifdef UNICODE
+#define SYM_COPYRIGHT   _T("\xa9")
+#define SYM_TIMES       _T("\xd7")
+#define SYM_MICROMETERS _T("\x3bcm")
+#define SYM_MIDDOT      _T("\xb7")
+#else
+#define SYM_COPYRIGHT   "(c)"
+#define SYM_TIMES       "x"
+#define SYM_MICROMETERS "micrometers"
+#define SYM_MIDDOT      "-"
+#endif
 
 #define ID_STBAR      19000
 //#define ID_IMGVIEWER     19100
@@ -177,10 +189,6 @@ struct globals_struct {
 
 	const TCHAR *twpng_homepage;
 	const TCHAR *twpng_reg_key;
-	const TCHAR *copyrightsym;
-	const TCHAR *timessym;
-	const TCHAR *micrometersym;
-	const TCHAR *middotsym;
 
 	TCHAR file_from_cmdline[MAX_PATH];
 	TCHAR last_open_dir[MAX_PATH];
