@@ -205,7 +205,7 @@ static int compress_it(unsigned char **dataoutp, unsigned char*datain, int inlen
 	alloced=  (int)((double)inlen*1.02) + 50;
 	dataout= (unsigned char*)malloc(alloced);
 	if(!dataout) {
-		mesg(MSG_E,_T("can't alloc memory for compress"));
+		mesg(MSG_E,_T("can") SYM_RSQUO _T("t alloc memory for compress"));
 		return 0;
 	}
 
@@ -255,7 +255,7 @@ static int uncompress_it(unsigned char **dataoutp, unsigned char*datain, int inl
 
 	dataout= (unsigned char*)malloc(alloced);
 	if(!dataout) {
-		mesg(MSG_E,_T("can't alloc memory for uncompress"));
+		mesg(MSG_E,_T("can") SYM_RSQUO _T("t alloc memory for uncompress"));
 		return 0;
 	}
 
@@ -400,7 +400,7 @@ int Chunk::init_from_memory(unsigned char *m, int msize)
 
 	data=(unsigned char*)malloc(length);
 	if(!data) {
-		mesg(MSG_S,_T("can't alloc memory for new chunk"));
+		mesg(MSG_S,_T("can") SYM_RSQUO _T("t alloc memory for new chunk"));
 		return 0;
 	}
 	memcpy(data,&m[8],length);
@@ -1596,7 +1596,7 @@ int Chunk::get_text_info()
 		else {
 			m_text_info.text= (TCHAR*)malloc( sizeof(TCHAR)*(length-p+1) );
 			if(!m_text_info.text) {
-				mesg(MSG_S,_T("can't alloc memory"));
+				mesg(MSG_S,_T("can") SYM_RSQUO _T("t alloc memory"));
 				return 0;
 			}
 			m_text_info.text_size_in_tchars=length-p;
@@ -1621,7 +1621,7 @@ void Chunk::describe_text(TCHAR *buf, int buflen, int ct)
 	TCHAR tmpbuf[200];
 
 	if(!get_text_info()) {
-		StringCchCopy(buf,buflen,_T("can't read text chunk"));
+		StringCchCopy(buf,buflen,_T("can") SYM_RSQUO _T("t read text chunk"));
 		return;
 	}
 
@@ -1640,7 +1640,7 @@ void Chunk::describe_text(TCHAR *buf, int buflen, int ct)
 			}
 		}
 		else {         // uncompressed text chunk
-			StringCchCopy(text,MAX_TEXT_DISPLAY,_T(" --can't read text--"));
+			StringCchCopy(text,MAX_TEXT_DISPLAY,_T(" --can") SYM_RSQUO _T("t read text--"));
 		}
 	}
 	else {
@@ -1679,15 +1679,15 @@ void Chunk::describe_text(TCHAR *buf, int buflen, int ct)
 	if(m_text_info.is_compressed && ct==CHUNK_iTXt) StringCchCat(buf,buflen,_T(" (international, compressed)"));
 	else if(m_text_info.is_compressed) StringCchCat(buf,buflen,_T(" (compressed)"));
 	else if(ct==CHUNK_iTXt) StringCchCat(buf,buflen,_T(" (international)"));
-	StringCchPrintf(tmpbuf,200,_T(", key=\"%s\"%s"),m_text_info.keyword,flag?_T(""):_T(" (nonstandard)"));
+	StringCchPrintf(tmpbuf,200,_T(", key=") SYM_LDQUO _T("%s") SYM_RDQUO _T("%s"),m_text_info.keyword,flag?_T(""):_T(" (nonstandard)"));
 	StringCchCat(buf,buflen,tmpbuf);
 	if(ct==CHUNK_iTXt && m_text_info.language && m_text_info.language[0]) {
 		StringCchPrintf(tmpbuf,200,_T(", lang=%s"),m_text_info.language);
 		StringCchCat(buf,buflen,tmpbuf);
 	}
-	StringCchCat(buf,buflen,_T(": \""));
+	StringCchCat(buf,buflen,_T(": ") SYM_LDQUO );
 	StringCchCat(buf,buflen,text);
-	StringCchCat(buf,buflen,_T("\""));
+	StringCchCat(buf,buflen,SYM_RDQUO);
 }
 
 static const TCHAR *monthname[] = { _T("INVALID-MONTH"),_T("Jan"),_T("Feb"),_T("Mar"),_T("Apr"),_T("May"),
@@ -2347,17 +2347,17 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
 			switch(ch->m_parentpng->m_colortype) {
 			case 3:
-				StringCchPrintf(buf,500,_T("Enter palette index (0-%d)"),(1<<tmpint1)-1);
+				StringCchPrintf(buf,500,_T("Enter palette index (0") SYM_ENDASH _T("%d)"),(1<<tmpint1)-1);
 				SetDlgItemText(hwnd,IDC_LABEL1,buf);
 				SetDlgItemInt(hwnd,IDC_EDIT1,(int)(ch->data[0]),FALSE);
 				break;
 			case 0: case 4:
-				StringCchPrintf(buf,500,_T("Enter background gray shade (0-%d)"),(1<<tmpint1)-1);
+				StringCchPrintf(buf,500,_T("Enter background gray shade (0") SYM_ENDASH _T("%d)"),(1<<tmpint1)-1);
 				SetDlgItemText(hwnd,IDC_LABEL1,buf);
 				SetDlgItemInt(hwnd,IDC_EDIT1,read_int16(&ch->data[0]),FALSE);
 				break;
 			case 2: case 6:
-				StringCchPrintf(buf,500,_T("Enter background RGB values (0-%d)"),(1<<tmpint1)-1);
+				StringCchPrintf(buf,500,_T("Enter background RGB values (0") SYM_ENDASH _T("%d)"),(1<<tmpint1)-1);
 				SetDlgItemText(hwnd,IDC_LABEL1,buf);
 				SetDlgItemInt(hwnd,IDC_EDIT1,read_int16(&ch->data[0]),FALSE);
 				SetDlgItemInt(hwnd,IDC_EDIT2,read_int16(&ch->data[2]),FALSE);
@@ -2369,7 +2369,7 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		case CHUNK_sBIT:
 			SetWindowText(hwnd,_T("Significant bits"));
 			tmpint1= (ch->m_parentpng->m_colortype==3)?8:(int)ch->m_parentpng->m_bitdepth;
-			StringCchPrintf(buf,500,_T("Enter significant bits (1-%d)"),tmpint1);
+			StringCchPrintf(buf,500,_T("Enter significant bits (1") SYM_ENDASH _T("%d)"),tmpint1);
 			SetDlgItemText(hwnd,IDC_LABEL1,buf);
 
 			if(ch->length>=1)
@@ -2389,12 +2389,12 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
 			switch(ch->m_parentpng->m_colortype) {
 			case 0: case 4:
-				StringCchPrintf(buf,500,_T("Enter transparent gray shade (0-%d)"),(1<<tmpint1)-1);
+				StringCchPrintf(buf,500,_T("Enter transparent gray shade (0") SYM_ENDASH _T("%d)"),(1<<tmpint1)-1);
 				SetDlgItemText(hwnd,IDC_LABEL1,buf);
 				SetDlgItemInt(hwnd,IDC_EDIT1,read_int16(&ch->data[0]),FALSE);
 				break;
 			case 2: case 6:
-				StringCchPrintf(buf,500,_T("Enter transparent RGB color (0-%d)"),(1<<tmpint1)-1);
+				StringCchPrintf(buf,500,_T("Enter transparent RGB color (0") SYM_ENDASH _T("%d)"),(1<<tmpint1)-1);
 				SetDlgItemText(hwnd,IDC_LABEL1,buf);
 				SetDlgItemInt(hwnd,IDC_EDIT1,read_int16(&ch->data[0]),FALSE);
 				SetDlgItemInt(hwnd,IDC_EDIT2,read_int16(&ch->data[2]),FALSE);
@@ -2975,12 +2975,12 @@ static void set_pal_labels(HWND hwnd,palette_info_struct_t *p)
 {
 	TCHAR buf[256];
 	if(p->caneditcolors)
-		StringCchPrintf(buf,256,_T("Colors in palette (%d-%d):"),p->minplte,p->maxplte);
+		StringCchPrintf(buf,256,_T("Colors in palette (%d") SYM_ENDASH _T("%d):"),p->minplte,p->maxplte);
 	else StringCchCopy(buf,256,_T("Gray shades:"));
 	SetDlgItemText(hwnd,IDC_STATIC1,buf);
 
 	if(p->caneditcolors)
-		StringCchPrintf(buf,256,_T("Alpha values (%d-%d):"),p->mintrns,(p->mintrns)?(p->numplte):0);
+		StringCchPrintf(buf,256,_T("Alpha values (%d") SYM_ENDASH _T("%d):"),p->mintrns,(p->mintrns)?(p->numplte):0);
 	else
 		StringCchCopy(buf,256,_T("Transparent colors:"));
 	SetDlgItemText(hwnd,IDC_STATIC2,buf);

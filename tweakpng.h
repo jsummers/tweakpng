@@ -3,22 +3,32 @@
 #ifndef TWEAKPNG_H
 #define TWEAKPNG_H
 
-#define TWEAKPNG_VER_STRING      _T("1.4.1")
-#define TWEAKPNG_COPYRIGHT_DATE  _T("1999-2011")
-#define TWEAKPNG_HOMEPAGE        _T("http://entropymine.com/jason/tweakpng/")
-
 // Symbols, characters, etc., that are different when Unicode is disabled.
 #ifdef UNICODE
 #define SYM_COPYRIGHT   _T("\xa9")
 #define SYM_TIMES       _T("\xd7")
 #define SYM_MICROMETERS _T("\x3bcm")
 #define SYM_MIDDOT      _T("\xb7")
+#define SYM_ENDASH      _T("\x2013")
+#define SYM_LSQUO       _T("\x2018")
+#define SYM_RSQUO       _T("\x2019")
+#define SYM_LDQUO       _T("\x201c")
+#define SYM_RDQUO       _T("\x201d")
 #else
 #define SYM_COPYRIGHT   "(c)"
 #define SYM_TIMES       "x"
 #define SYM_MICROMETERS "micrometers"
 #define SYM_MIDDOT      "-"
+#define SYM_ENDASH      "-"
+#define SYM_LSQUO       "'"
+#define SYM_RSQUO       "'"
+#define SYM_LDQUO       "\""
+#define SYM_RDQUO       "\""
 #endif
+
+#define TWEAKPNG_VER_STRING      _T("1.4.1")
+#define TWEAKPNG_COPYRIGHT_DATE  _T("1999") SYM_ENDASH _T("2011")
+#define TWEAKPNG_HOMEPAGE        _T("http://entropymine.com/jason/tweakpng/")
 
 #define ID_STBAR      19000
 //#define ID_IMGVIEWER     19100

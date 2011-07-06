@@ -210,12 +210,12 @@ void Viewer::Update(Png *png1)
 
 	if(png1->m_imgtype==IMG_MNG) {
 		m_errorflag=1;
-		StringCchCopy(m_errormsg,200,_T("Viewer doesn't support MNG files."));
+		StringCchCopy(m_errormsg,200,_T("Viewer doesn") SYM_RSQUO _T("t support MNG files."));
 		goto abort;
 	}
 	else if(png1->m_imgtype==IMG_JNG) {
 		m_errorflag=1;
-		StringCchCopy(m_errormsg,200,_T("Viewer doesn't support JNG files."));
+		StringCchCopy(m_errormsg,200,_T("Viewer doesn") SYM_RSQUO _T("t support JNG files."));
 		goto abort;
 	}
 

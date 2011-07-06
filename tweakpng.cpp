@@ -624,7 +624,7 @@ int Png::write_file(const TCHAR *fn)
 	fh=CreateFile(fn,GENERIC_WRITE,0,NULL,CREATE_ALWAYS,
 		FILE_ATTRIBUTE_NORMAL,NULL);
 	if(fh==INVALID_HANDLE_VALUE) {
-		mesg(MSG_E,_T("Can't write file (%s)"),fn);
+		mesg(MSG_E,_T("Can") SYM_RSQUO _T("t write file (%s)"),fn);
 		return 0;
 	}
 
@@ -648,7 +648,7 @@ void Png::init_new_chunk(int n)
 	m_chunks_alloc += 200;
 	chunk=(Chunk**)realloc((void*)chunk, m_chunks_alloc*sizeof(Chunk*));
 	if(!chunk) {
-		mesg(MSG_S,_T("can't alloc memory for chunks array"));
+		mesg(MSG_S,_T("can") SYM_RSQUO _T("t alloc memory for chunks array"));
 		m_num_chunks=0;
 	}
 }
@@ -766,7 +766,7 @@ int Png::read_next_chunk(HANDLE fh)
 
 		c->data = (unsigned char*)malloc(c->length);
 		if(!c->data) {
-			mesg(MSG_S,_T("Can't allocate memory for chunk"));
+			mesg(MSG_S,_T("Can") SYM_RSQUO _T("t allocate memory for chunk"));
 			delete c;
 			return 0;
 		}
@@ -856,7 +856,7 @@ Png::Png(const TCHAR *load_fn, const TCHAR *save_fn)
 	fh=CreateFile(load_fn,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL,NULL);
 	if(fh==INVALID_HANDLE_VALUE) {
-		mesg(MSG_E,_T("Can't open file (%s)"),load_fn);
+		mesg(MSG_E,_T("Can") SYM_RSQUO _T("t open file (%s)"),load_fn);
 		return;
 	}
 
@@ -1847,7 +1847,7 @@ static void ImportChunk(void)
 	fh=CreateFile(fn,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL,NULL);
 	if(fh==INVALID_HANDLE_VALUE) {
-		mesg(MSG_E,_T("Can't open file (%s)"),fn);
+		mesg(MSG_E,_T("Can") SYM_RSQUO _T("t open file (%s)"),fn);
 		return;
 	}
 
@@ -1907,7 +1907,7 @@ static void ExportChunk(void)
 		fh=CreateFile(ofn.lpstrFile,GENERIC_WRITE,0,NULL,CREATE_ALWAYS,
 			FILE_ATTRIBUTE_NORMAL,NULL);
 		if(fh==INVALID_HANDLE_VALUE) {
-			mesg(MSG_E,_T("Can't create file"));
+			mesg(MSG_E,_T("Can") SYM_RSQUO _T("t create file"));
 		}
 		else {
 			png->chunk[n]->write_to_file(fh,1);
@@ -2149,7 +2149,7 @@ static void CombineIDAT(int mode)
 
 	newdata= (unsigned char*)malloc(len);
 	if(!newdata) {
-		mesg(MSG_S,_T("can't allocate memory"));
+		mesg(MSG_S,_T("Can") SYM_RSQUO _T("t allocate memory"));
 		return;
 	}
 
@@ -3217,7 +3217,7 @@ static INT_PTR CALLBACK DlgProcSplitIDAT(HWND hwnd, UINT msg, WPARAM wParam, LPA
 	case WM_INITDIALOG:
 		ch = (Chunk*)lParam;
 		if(!ch) return 1;
-		StringCchPrintf(buf,500,_T("Size in bytes of first section (0-%d)"),ch->length);
+		StringCchPrintf(buf,500,_T("Size in bytes of first section (0") SYM_ENDASH _T("%d)"),ch->length);
 		SetDlgItemText(hwnd,IDC_SPLIT_TEXT,buf);
 
 		return 1;
@@ -3242,7 +3242,7 @@ static INT_PTR CALLBACK DlgProcSplitIDAT(HWND hwnd, UINT msg, WPARAM wParam, LPA
 				rep= (IsDlgButtonChecked(hwnd,IDC_SPLIT_REPEAT)==BST_CHECKED)?1:0;
 
 				if(n==0 && rep) {
-					mesg(MSG_E,_T("Can't divide repeatedly into chunks of zero size."));
+					mesg(MSG_E,_T("Can") SYM_RSQUO _T("t divide repeatedly into chunks of zero size."));
 					return 1;
 				}
 
@@ -3354,8 +3354,8 @@ static INT_PTR CALLBACK DlgProcTools(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 	case WM_INITDIALOG:
 		SetDlgItemText(hwnd,IDC_STATIC1,_T("Configure the tools to list on the Tools menu. ")
 		  _T("The Name field is any name you choose. ")
-		  _T("In the Parameters field, for a viewer, \"%1\" will be replaced by the PNG filename. ")
-		  _T("For a filter, \"%1\" is the input file and \"%2\" is the output file."));
+		  _T("In the Parameters field, for a viewer, ") SYM_LDQUO _T("%1") SYM_RDQUO _T(" will be replaced by the PNG filename. ")
+		  _T("For a filter, ") SYM_LDQUO _T("%1") SYM_RDQUO _T(" is the input file and ") SYM_LDQUO _T("%2") SYM_RDQUO _T(" is the output file."));
 		for(i=0;i<TWPNG_NUMTOOLS;i++) {
 			SetDlgItemText(hwnd,toolsn[i],globals.tools[i].name);
 			SetDlgItemText(hwnd,toolsc[i],globals.tools[i].cmd);
