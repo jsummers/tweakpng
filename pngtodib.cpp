@@ -416,22 +416,20 @@ static int p2d_make_color_correction_tables(P2D *p2d)
 	return 1;
 }
 
-// Handle cases where the PNG image can be read directly into the DIB image
+// Handle cases where an RGB PNG image can be read directly into the DIB image
 // buffer.
-static int decode_strategy_8bit_direct(P2D *p2d, int samples_per_pixel, int colorcorrect)
+static int decode_strategy_rgb(P2D *p2d)
 {
 	size_t i, j;
 	int samples_per_row;
 
-	if(samples_per_pixel==3) {
-		png_set_bgr(p2d->png_ptr);
-	}
+	png_set_bgr(p2d->png_ptr);
 
 	png_read_image(p2d->png_ptr, p2d->dib_row_pointers);
 
 	// With no transparency, sRGB source images don't need color correction.
-	if(p2d->csdescr.type==P2D_CC_GAMMA && colorcorrect) {
-		samples_per_row = samples_per_pixel*p2d->width;
+	if(p2d->csdescr.type==P2D_CC_GAMMA) {
+		samples_per_row = 3*p2d->width;
 
 		for(j=0;j<p2d->height;j++) {
 			for(i=0;i<samples_per_row;i++) {
@@ -634,12 +632,10 @@ int p2d_run(P2D *p2d)
 	int dib_bpp, dib_bytesperrow;
 	int j;
 	int retval;
-	enum p2d_strategy { P2D_ST_NONE, P2D_ST_8BIT_DIRECT, P2D_ST_RGBA, P2D_ST_GRAYA,
+	enum p2d_strategy { P2D_ST_NONE, P2D_ST_RGB, P2D_ST_RGBA, P2D_ST_GRAYA,
 	  P2D_ST_PALETTE, P2D_ST_GRAY_TO_PAL };
 	enum p2d_strategy decode_strategy;
-	int strategy_spp=0;
 	int strategy_tocolor=0;
-	int strategy_colorcorrect=1;
 	int bg_is_gray;
 	int has_trns = 0;
 	int k;
@@ -821,7 +817,7 @@ int p2d_run(P2D *p2d)
 	}
 	else if(p2d->color_type==PNG_COLOR_TYPE_RGB && !p2d->handle_trans) {
 		// RGB with no transparency.
-		decode_strategy=P2D_ST_8BIT_DIRECT; strategy_spp=3; strategy_colorcorrect=1;
+		decode_strategy=P2D_ST_RGB;
 		dib_bpp=24;
 		if(p2d->pngf_bit_depth==16) {
 			png_set_strip_16(p2d->png_ptr);
@@ -894,8 +890,8 @@ int p2d_run(P2D *p2d)
 	//////// Read the PNG image into our DIB memory structure.
 
 	switch(decode_strategy) {
-	case P2D_ST_8BIT_DIRECT:
-		decode_strategy_8bit_direct(p2d,strategy_spp,strategy_colorcorrect);
+	case P2D_ST_RGB:
+		decode_strategy_rgb(p2d);
 		break;
 	case P2D_ST_RGBA:
 		decode_strategy_rgba(p2d);
