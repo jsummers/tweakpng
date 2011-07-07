@@ -418,22 +418,56 @@ static int p2d_make_color_correction_tables(P2D *p2d)
 
 // Handle cases where an RGB PNG image can be read directly into the DIB image
 // buffer.
-static int decode_strategy_rgb(P2D *p2d)
+static int decode_strategy_rgb(P2D *p2d, int binarytrns)
 {
 	size_t i, j;
-	int samples_per_row;
+	int k;
+	struct p2d_color255_struct trns_key_color;
+	struct p2d_color255_struct c;
+	int is_bkgd_pixel;
+	png_bytep trans_alpha;
+	png_color_16p trans_color;
+	int num_trans;
+
+	if(binarytrns) {
+		// Read the transparency key color from the PNG file.
+		png_get_tRNS(p2d->png_ptr, p2d->info_ptr, &trans_alpha, &num_trans, &trans_color);
+		trns_key_color.sm255[P2D_SM_R] = (p2d_byte)trans_color->red;
+		trns_key_color.sm255[P2D_SM_G] = (p2d_byte)trans_color->green;
+		trns_key_color.sm255[P2D_SM_B] = (p2d_byte)trans_color->blue;
+	}
 
 	png_set_bgr(p2d->png_ptr);
 
 	png_read_image(p2d->png_ptr, p2d->dib_row_pointers);
 
+	// Do color correction + application of binary transparency, if necessary.
 	// With no transparency, sRGB source images don't need color correction.
-	if(p2d->csdescr.type==P2D_CC_GAMMA) {
-		samples_per_row = 3*p2d->width;
-
+	if(p2d->csdescr.type==P2D_CC_GAMMA || binarytrns) {
 		for(j=0;j<p2d->height;j++) {
-			for(i=0;i<samples_per_row;i++) {
-				p2d->dib_row_pointers[j][i] = p2d->src255_to_srgb255_table[p2d->dib_row_pointers[j][i]];
+			for(i=0;i<p2d->width;i++) {
+				for(k=0;k<3;k++) {
+					c.sm255[2-k] = p2d->dib_row_pointers[j][i*3+k];
+				}
+				is_bkgd_pixel=0;
+				if(binarytrns) {
+					if(c.sm255[P2D_SM_R]==trns_key_color.sm255[P2D_SM_R] &&
+					   c.sm255[P2D_SM_G]==trns_key_color.sm255[P2D_SM_G] &&
+					   c.sm255[P2D_SM_B]==trns_key_color.sm255[P2D_SM_B])
+					{
+						is_bkgd_pixel=1;
+					}
+				}
+				if(is_bkgd_pixel) {
+					for(k=0;k<3;k++) {
+						p2d->dib_row_pointers[j][i*3+k] = p2d->bkgd_color_applied_srgb.sm255[2-k];
+					}
+				}
+				else {
+					for(k=0;k<3;k++) {
+						p2d->dib_row_pointers[j][i*3+k] = p2d->src255_to_srgb255_table[c.sm255[2-k]];
+					}
+				}
 			}
 		}
 	}
@@ -636,6 +670,7 @@ int p2d_run(P2D *p2d)
 	  P2D_ST_PALETTE, P2D_ST_GRAY_TO_PAL };
 	enum p2d_strategy decode_strategy;
 	int strategy_tocolor=0;
+	int strategy_binarytrns=0; // If set, use p2d->trns_color_key
 	int bg_is_gray;
 	int has_trns = 0;
 	int k;
@@ -825,14 +860,17 @@ int p2d_run(P2D *p2d)
 	}
 	else if(p2d->color_type==PNG_COLOR_TYPE_RGB) {
 		// RGB with binary transparency.
-		decode_strategy=P2D_ST_RGBA;
-		dib_bpp=24;
-		// TODO: We could handle transparency ourselves, more efficiently,
-		// without promoting it to a whole alpha channel.
-		png_set_tRNS_to_alpha(p2d->png_ptr);
-
 		if(p2d->pngf_bit_depth==16) {
+			// If 16-bit, have libpng convert to 8bit with an alpha channel.
+			decode_strategy=P2D_ST_RGBA;
+			dib_bpp=24;
+			png_set_tRNS_to_alpha(p2d->png_ptr);
 			png_set_strip_16(p2d->png_ptr);
+		}
+		else {
+			// If 8-bit, handle everything ourselves.
+			decode_strategy=P2D_ST_RGB; strategy_binarytrns=1;
+			dib_bpp=24;
 		}
 	}
 	else if(p2d->color_type==PNG_COLOR_TYPE_RGB_ALPHA) {
@@ -891,7 +929,7 @@ int p2d_run(P2D *p2d)
 
 	switch(decode_strategy) {
 	case P2D_ST_RGB:
-		decode_strategy_rgb(p2d);
+		decode_strategy_rgb(p2d,strategy_binarytrns);
 		break;
 	case P2D_ST_RGBA:
 		decode_strategy_rgba(p2d);
