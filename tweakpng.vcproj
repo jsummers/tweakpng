@@ -46,7 +46,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\zlib-1.2.5,..\libpng-1.5.2"
+				AdditionalIncludeDirectories="..\zlib,..\libpng"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -68,7 +68,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\libpng-1.5.2\Release\libpng.lib ..\zlib-1.2.5\Release\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\libpng\Release\libpng.lib ..\zlib\Release\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -129,7 +129,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\zlib-1.2.5,..\libpng-1.5.2"
+				AdditionalIncludeDirectories="..\zlib,..\libpng"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -151,7 +151,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\libpng-1.5.2\Release64\libpng.lib ..\zlib-1.2.5\Release64\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\libpng\Release64\libpng.lib ..\zlib\Release64\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -210,7 +210,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\zlib-1.2.5,..\libpng-1.5.2"
+				AdditionalIncludeDirectories="..\zlib,..\libpng"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -233,7 +233,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\libpng-1.5.2\Debug\libpng.lib ..\zlib-1.2.5\Debug\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\libpng\Debug\libpng.lib ..\zlib\Debug\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
@@ -294,7 +294,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\zlib-1.2.5,..\libpng-1.5.2"
+				AdditionalIncludeDirectories="..\zlib,..\libpng"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -317,7 +317,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\libpng-1.5.2\Debug64\libpng.lib ..\zlib-1.2.5\Debug64\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\libpng\Debug64\libpng.lib ..\zlib\Debug64\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
@@ -378,7 +378,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\zlib-1.2.5,..\libpng-1.5.2"
+				AdditionalIncludeDirectories="..\zlib,..\libpng"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -400,7 +400,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\libpng-1.5.2\Debug\libpng.lib ..\zlib-1.2.5\Debug\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\libpng\Debug\libpng.lib ..\zlib\Debug\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
@@ -460,7 +460,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\zlib-1.2.5,..\libpng-1.5.2"
+				AdditionalIncludeDirectories="..\zlib,..\libpng"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;UNICODE;_UNICODE"
 				MinimalRebuild="true"
 				RuntimeLibrary="1"
@@ -482,7 +482,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\libpng-1.5.2\Debug64\libpng.lib ..\zlib-1.2.5\Debug64\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\libpng\Debug64\libpng.lib ..\zlib\Debug64\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
@@ -542,7 +542,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\zlib-1.2.5,..\libpng-1.5.2"
+				AdditionalIncludeDirectories="..\zlib,..\libpng"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -564,7 +564,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\libpng-1.5.2\Release\libpng.lib ..\zlib-1.2.5\Release\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\libpng\Release\libpng.lib ..\zlib\Release\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -626,7 +626,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\zlib-1.2.5,..\libpng-1.5.2"
+				AdditionalIncludeDirectories="..\zlib,..\libpng"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -648,7 +648,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="..\libpng-1.5.2\Release64\libpng.lib ..\zlib-1.2.5\Release64\zlib.lib comctl32.lib"
+				AdditionalDependencies="..\libpng\Release64\libpng.lib ..\zlib\Release64\zlib.lib comctl32.lib"
 				OutputFile="$(OutDir)\tweakpng.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
