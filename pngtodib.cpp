@@ -670,7 +670,7 @@ int p2d_run(P2D *p2d)
 	  P2D_ST_PALETTE, P2D_ST_GRAY_TO_PAL };
 	enum p2d_strategy decode_strategy;
 	int strategy_tocolor=0;
-	int strategy_binarytrns=0; // If set, use p2d->trns_color_key
+	int strategy_binarytrns=0;
 	int bg_is_gray;
 	int has_trns = 0;
 	int k;
@@ -916,7 +916,7 @@ int p2d_run(P2D *p2d)
 		p2d_make_gray_palette(p2d);
 	}
 
-	//////// Allocate row_pointers, which point to each row in the DIB we allocated.
+	//////// Allocate dib_row_pointers, which point to each row in the DIB we allocated.
 
 	p2d->dib_row_pointers=(p2d_byte**)malloc(p2d->height*sizeof(p2d_byte*));
 	if(!p2d->dib_row_pointers) { retval=PNGD_E_NOMEM; goto done; }
