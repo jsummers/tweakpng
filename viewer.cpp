@@ -321,16 +321,16 @@ void Viewer::GoodScrollPos()
 	}
 
 	if(m_stretchedheight+2*b <= m_clientrect.bottom) {
-		//imgpos must be between 0 and (windowwidth-imgwidth)
+		//imgpos must be between 0 and (windowheight-imgheight)
 		if(m_imgpos_y<b) m_imgpos_y=b;
 		if(m_imgpos_y > (m_clientrect.bottom-m_stretchedheight-b))
 			m_imgpos_y = m_clientrect.bottom-m_stretchedheight-b;
 	}
 	else {
-		// must be between -(imgwidth-windowwidth) and 0
+		// must be between -(imgheight-windowheight) and 0
 		if(m_imgpos_y < (m_clientrect.bottom-m_stretchedheight-b))
 			m_imgpos_y = m_clientrect.bottom-m_stretchedheight-b;
-		if(m_imgpos_y>0) m_imgpos_y=b;
+		if(m_imgpos_y>b) m_imgpos_y=b;
 	}
 }
 
