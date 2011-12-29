@@ -17,6 +17,25 @@
     See the file tweakpng-src.txt for more information.
 */
 
+// Try to use a less ancient version of comctl32.dll than the default.
+#ifdef _WIN64
+#pragma comment(linker, \
+	"\"/manifestdependency:type='Win32' "\
+	"name='Microsoft.Windows.Common-Controls' "\
+	"version='6.0.0.0' "\
+	"processorArchitecture='amd64' "\
+	"publicKeyToken='6595b64144ccf1df' "\
+	"language='*'\"")
+#else
+#pragma comment(linker, \
+	"\"/manifestdependency:type='Win32' "\
+	"name='Microsoft.Windows.Common-Controls' "\
+	"version='6.0.0.0' "\
+	"processorArchitecture='X86' "\
+	"publicKeyToken='6595b64144ccf1df' "\
+	"language='*'\"")
+#endif
+
 #include "twpng-config.h"
 
 #include <windows.h>
