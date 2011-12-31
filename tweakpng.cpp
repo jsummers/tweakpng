@@ -3018,23 +3018,45 @@ static int get_reg_name_for_ext(const TCHAR *format, TCHAR *logicalname, int log
 	LONG rv;
 	int retval;
 	DWORD datatype,datasize;
+	TCHAR buf1[500];
 
 	retval=0;
 	key1=NULL;
 	StringCchCopy(logicalname,logicalname_len,_T(""));
 
-	rv=RegOpenKeyEx(HKEY_CLASSES_ROOT,format,0,KEY_READ,&key1);
-	if(rv!=ERROR_SUCCESS) goto abort;
+	// First check FileExts key. If a UserChoice key refers us to a logical
+	// name, we'll use that name.
+	// This does not seem right at all, but it's the only thing I've figured out
+	// that seems to work.
+	// This probably won't work for everyone, and it will stop working whenever
+	// you change your default PNG application.
+	StringCbPrintf(buf1,sizeof(buf1),_T("Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\%s\\UserChoice"),format);
+	rv=RegOpenKeyEx(HKEY_CURRENT_USER,buf1,0,KEY_READ,&key1);
+	if(rv==ERROR_SUCCESS) {
+		datasize=sizeof(TCHAR)*logicalname_len;
+		rv=RegQueryValueEx(key1,_T("Progid"),NULL,&datatype,(BYTE*)logicalname,&datasize);
+		if(rv==ERROR_SUCCESS && datatype==REG_SZ) {
+			retval = 1;
+			RegCloseKey(key1); key1=NULL;
+			goto done;
+		}
+		RegCloseKey(key1); key1=NULL;
+	}
+
+	// If UserChoice doesn't exist, check Classes key directly.
+	StringCbPrintf(buf1,sizeof(buf1),_T("Software\\Classes\\%s"),format);
+	rv=RegOpenKeyEx(HKEY_CURRENT_USER,buf1,0,KEY_READ,&key1);
+	if(rv!=ERROR_SUCCESS) goto done;
 
 	datasize=sizeof(TCHAR)*logicalname_len;
 	rv=RegQueryValueEx(key1,NULL,NULL,&datatype,(BYTE*)logicalname,&datasize);
-	if(rv!=ERROR_SUCCESS) goto abort;
-	if(datatype!=REG_SZ) goto abort;
-	if(datasize<sizeof(TCHAR)*2) goto abort;
+	if(rv!=ERROR_SUCCESS) goto done;
+	if(datatype!=REG_SZ) goto done;
+	if(datasize<sizeof(TCHAR)*2) goto done;
 	RegCloseKey(key1); key1=NULL;
 	retval=1;
 
-abort:
+done:
 	if(key1) RegCloseKey(key1);
 	return retval;
 }
@@ -3055,9 +3077,9 @@ static int is_explorer_menu_set(void)
 	x=get_reg_name_for_ext(_T(".png"),logicalname,500);
 	if(!x) goto abort;
 
-	StringCchPrintf(buf,500,_T("%s\\shell\\tweakpng"),logicalname);
+	StringCchPrintf(buf,500,_T("Software\\Classes\\%s\\shell\\tweakpng"),logicalname);
 	// we only want to know if this key exists
-	rv=RegOpenKeyEx(HKEY_CLASSES_ROOT,buf,0,KEY_READ,&key1);
+	rv=RegOpenKeyEx(HKEY_CURRENT_USER,buf,0,KEY_READ,&key1);
 
 	if(rv!=ERROR_SUCCESS) goto abort;
 
@@ -3080,6 +3102,7 @@ static void add_to_explorer_menu(void)
 	HKEY key1;
 	DWORD disp;
 	LONG rv;
+	TCHAR buf1[500];
 	TCHAR buf[500];
 	TCHAR cmd[500];
 
@@ -3087,8 +3110,8 @@ static void add_to_explorer_menu(void)
 		x=get_reg_name_for_ext(fmts[i],logicalname,500);
 		if(!x) {
 			StringCchCopy(logicalname,500,dflt_fmt_name[i]);
-			// create HKCR\\.*ng if necessary
-			rv=RegCreateKeyEx(HKEY_CLASSES_ROOT,fmts[i],0,NULL,
+			StringCbPrintf(buf1,sizeof(buf1),_T("Software\\Classes\\%s"),fmts[i]);
+			rv=RegCreateKeyEx(HKEY_CURRENT_USER,buf1,0,NULL,
 				REG_OPTION_NON_VOLATILE,KEY_WRITE,NULL,&key1,&disp);
 			if(rv==ERROR_SUCCESS) {
 				RegSetValueEx(key1,_T(""),0,REG_SZ,(BYTE*)logicalname,sizeof(TCHAR)*(1+lstrlen(logicalname)));
@@ -3096,24 +3119,22 @@ static void add_to_explorer_menu(void)
 			}
 		}
 
-		// create HKCR\\[png_auto_file] if necessary
-		rv=RegCreateKeyEx(HKEY_CLASSES_ROOT,logicalname,0,NULL,
+		StringCbPrintf(buf1,sizeof(buf1),_T("Software\\Classes\\%s"),logicalname);
+		rv=RegCreateKeyEx(HKEY_CURRENT_USER,buf1,0,NULL,
 			REG_OPTION_NON_VOLATILE,KEY_WRITE,NULL,&key1,&disp);
 		if(rv==ERROR_SUCCESS) {
 			RegCloseKey(key1);
 		}
 
-		// create HKCR\\[png_auto_file]\shell
-		StringCchPrintf(buf,500,_T("%s\\shell"),logicalname);
-		rv=RegCreateKeyEx(HKEY_CLASSES_ROOT,buf,0,NULL,
+		StringCchPrintf(buf,500,_T("Software\\Classes\\%s\\shell"),logicalname);
+		rv=RegCreateKeyEx(HKEY_CURRENT_USER,buf,0,NULL,
 			REG_OPTION_NON_VOLATILE,KEY_WRITE,NULL,&key1,&disp);
 		if(rv==ERROR_SUCCESS) {
 			RegCloseKey(key1);
 		}
 
-		// create HKCR\\[png_auto_file]\shell\tweakpng
-		StringCchPrintf(buf,500,_T("%s\\shell\\tweakpng"),logicalname);
-		rv=RegCreateKeyEx(HKEY_CLASSES_ROOT,buf,0,NULL,
+		StringCchPrintf(buf,500,_T("Software\\Classes\\%s\\shell\\tweakpng"),logicalname);
+		rv=RegCreateKeyEx(HKEY_CURRENT_USER,buf,0,NULL,
 			REG_OPTION_NON_VOLATILE,KEY_WRITE,NULL,&key1,&disp);
 		if(rv==ERROR_SUCCESS) {
 			// The name on the menu:
@@ -3122,9 +3143,8 @@ static void add_to_explorer_menu(void)
 			RegCloseKey(key1);
 		}
 
-		// create HKCR\\[png_auto_file]\shell\tweakpng\\command
-		StringCchPrintf(buf,500,_T("%s\\shell\\tweakpng\\command"),logicalname);
-		rv=RegCreateKeyEx(HKEY_CLASSES_ROOT,buf,0,NULL,
+		StringCchPrintf(buf,500,_T("Software\\Classes\\%s\\shell\\tweakpng\\command"),logicalname);
+		rv=RegCreateKeyEx(HKEY_CURRENT_USER,buf,0,NULL,
 			REG_OPTION_NON_VOLATILE,KEY_WRITE,NULL,&key1,&disp);
 		if(rv==ERROR_SUCCESS) {
 			GetModuleFileName(globals.hInst,buf,500);
@@ -3146,10 +3166,10 @@ static void remove_from_explorer_menu(void)
 	for(i=0;i<=2;i++) {
 		x=get_reg_name_for_ext(fmts[i],logicalname,500);
 		if(x) {
-			StringCchPrintf(buf,500,_T("%s\\shell\\tweakpng\\command"),logicalname);
-			RegDeleteKey(HKEY_CLASSES_ROOT,buf);
-			StringCchPrintf(buf,500,_T("%s\\shell\\tweakpng"),logicalname);
-			RegDeleteKey(HKEY_CLASSES_ROOT,buf);
+			StringCchPrintf(buf,500,_T("Software\\Classes\\%s\\shell\\tweakpng\\command"),logicalname);
+			RegDeleteKey(HKEY_CURRENT_USER,buf);
+			StringCchPrintf(buf,500,_T("Software\\Classes\\%s\\shell\\tweakpng"),logicalname);
+			RegDeleteKey(HKEY_CURRENT_USER,buf);
 		}
 	}
 	return;

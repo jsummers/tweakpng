@@ -809,7 +809,7 @@ BEGIN
         BEGIN
             VALUE "Comments", "Website: http://entropymine.com/jason/tweakpng/\0"
             VALUE "CompanyName", "Jason Summers\0"
-            VALUE "FileDescription", "TweakPNG: a low-level PNG image file editor\0"
+            VALUE "FileDescription", "TweakPNG\0"
             VALUE "FileVersion", "1, 4, 2, 1\0"
             VALUE "InternalName", "tweakpng\0"
             VALUE "LegalCopyright", "Copyright (C) 1999-2011 Jason Summers\0"
