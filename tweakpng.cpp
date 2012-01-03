@@ -2625,6 +2625,10 @@ void update_viewer()
 #endif
 }
 
+struct prefs_dlg_ctx {
+	int remember_menusetting;
+};
+
 static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	WORD id;
@@ -2713,6 +2717,7 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 				ID_NEWIHDR,
 				ID_NEWSRGB,ID_NEWTIME,ID_NEWCHRM,ID_NEWTRNS,ID_NEWSBIT,
 				ID_NEWPLTE,ID_NEWSTER,ID_NEWACTL,ID_NEWFCTL,ID_NEWOFFS,
+				ID_NEWSCAL,
 				ID_COMBINEALLIDAT,
 				ID_IMPORTCHUNK,ID_SIGNATURE,ID_CHECKPNG,
 				ID_TOOL_1,ID_TOOL_2,ID_TOOL_3,ID_TOOL_4,ID_TOOL_5,ID_TOOL_6,
@@ -2843,7 +2848,9 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
 		case ID_PREFS:
 			globals.dlgs_open++;
-			DialogBox(globals.hInst,_T("DLG_PREFS"),hwnd,DlgProcPrefs);
+			struct prefs_dlg_ctx prctx;
+			ZeroMemory((void*)&prctx,sizeof(struct prefs_dlg_ctx));
+			DialogBoxParam(globals.hInst,_T("DLG_PREFS"),hwnd,DlgProcPrefs,(LPARAM)&prctx);
 			globals.dlgs_open--;
 			return 0;
 
@@ -3180,16 +3187,19 @@ static const TCHAR *cmprlevel_names[] = { _T("Default compression"),
 	  _T("1 = Fastest"),_T("2"),_T("3"),_T("4"),_T("5"),_T("6"),_T("7"),_T("8"),
 	  _T("9 = Best compression"),NULL };
 
-static int remember_menusetting;
-
 static INT_PTR CALLBACK DlgProcPrefs(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	int i;
 	WORD id;
+	struct prefs_dlg_ctx *prctx = NULL;
+
 	id=LOWORD(wParam);
 
-	switch (msg) {
-	case WM_INITDIALOG:
+	if(msg==WM_INITDIALOG) {
+		prctx = (struct prefs_dlg_ctx*)lParam;
+		if(!prctx) return 1;
+		SetWindowLongPtr(hwnd,DWLP_USER,lParam);
+
 		for(i=0;cmprlevel_names[i];i++) {
 			SendDlgItemMessage(hwnd,IDC_CMPRLEVEL,CB_ADDSTRING,0,
 			(LPARAM)cmprlevel_names[i]);
@@ -3207,10 +3217,17 @@ static INT_PTR CALLBACK DlgProcPrefs(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 			int x;
 			x=is_explorer_menu_set();
 			CheckDlgButton(hwnd,IDC_ADDTOMENU,x?BST_CHECKED:BST_UNCHECKED);
-			remember_menusetting=x;
+			prctx->remember_menusetting=x;
 		}
 
 		return 1;
+	}
+	else {
+		prctx = (struct prefs_dlg_ctx*)GetWindowLongPtr(hwnd,DWLP_USER);
+		if(!prctx) return 0;
+	}
+
+	switch (msg) {
 	case WM_COMMAND:
 		switch(id) {
 		case IDOK:
@@ -3218,7 +3235,7 @@ static INT_PTR CALLBACK DlgProcPrefs(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 				int x;
 				x= (IsDlgButtonChecked(hwnd,IDC_ADDTOMENU) == BST_CHECKED);
 
-				if(x!=remember_menusetting) {
+				if(x!=prctx->remember_menusetting) {
 					if(x) {
 						add_to_explorer_menu();
 					}
@@ -3246,21 +3263,26 @@ static INT_PTR CALLBACK DlgProcPrefs(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
 static INT_PTR CALLBACK DlgProcSplitIDAT(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	static Chunk *ch=NULL;
+	Chunk *ch=NULL;
 	WORD id;
 	TCHAR buf[500];
 
 	id=LOWORD(wParam);
 
-	switch (msg) {
-	case WM_INITDIALOG:
+	if(msg==WM_INITDIALOG) {
 		ch = (Chunk*)lParam;
 		if(!ch) return 1;
+		SetWindowLongPtr(hwnd,DWLP_USER,lParam);
 		StringCchPrintf(buf,500,_T("Size in bytes of first section (0") SYM_ENDASH _T("%d)"),ch->length);
 		SetDlgItemText(hwnd,IDC_SPLIT_TEXT,buf);
 
 		return 1;
+	}
+	else {
+		ch = (Chunk*)GetWindowLongPtr(hwnd,DWLP_USER);
+	}
 
+	switch (msg) {
 	case WM_DESTROY:
 		ch=NULL;
 		return 1;
@@ -3300,16 +3322,16 @@ static INT_PTR CALLBACK DlgProcSplitIDAT(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
 static INT_PTR CALLBACK DlgProcSetSig(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	static Png *png1=NULL;
+	Png *png1=NULL;
 	WORD id;
 	UINT x;
 
 	id=LOWORD(wParam);
 
-	switch (msg) {
-	case WM_INITDIALOG:
+	if(msg==WM_INITDIALOG) {
 		png1 = (Png*)lParam;
 		if(!png1) return 1;
+		SetWindowLongPtr(hwnd,DWLP_USER,lParam);
 
 		switch(png1->m_imgtype) {
 		case IMG_PNG: x=IDC_RADIO1; break;
@@ -3321,6 +3343,13 @@ static INT_PTR CALLBACK DlgProcSetSig(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 
 		return 1;
 
+	}
+	else {
+		png1 = (Png*)GetWindowLongPtr(hwnd,DWLP_USER);
+		if(!png1) return 0;
+	}
+
+	switch (msg) {
 	case WM_DESTROY:
 		png1=NULL;
 		return 1;

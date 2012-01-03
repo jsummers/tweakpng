@@ -100,7 +100,7 @@ BEGIN
     END
     POPUP "&Insert"
     BEGIN
-        MENUITEM "acTL (APNG animation control", ID_NEWACTL
+        MENUITEM "acTL (APNG animation control)", ID_NEWACTL
         MENUITEM "bKGD (Background color)",     ID_NEWBKGD
         MENUITEM "cHRM (Chromaticities)",       ID_NEWCHRM
         MENUITEM "fcTL (APNG frame control)",   ID_NEWFCTL

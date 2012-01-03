@@ -38,7 +38,7 @@
 
 extern struct globals_struct globals;
 
-static TCHAR *known_text_keys[] = { _T("Title"),_T("Author"),_T("Description"),
+static const TCHAR *known_text_keys[] = { _T("Title"),_T("Author"),_T("Description"),
 	_T("Copyright"),_T("Creation Time"),_T("Software"),_T("Disclaimer"),
 	_T("Warning"),_T("Source"),_T("Comment"),NULL };
 
@@ -47,11 +47,11 @@ static INT_PTR CALLBACK DlgProcEdit_tEXt(HWND hWnd, UINT msg, WPARAM wParam, LPA
 static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static INT_PTR CALLBACK DlgProcGetInt(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-typedef struct {
+struct get_int_ctx {
 	int value;   // initial value and final value
 	TCHAR *label;
 	TCHAR *title;  // window title
-} get_int_struct_t;
+};
 
 
 typedef struct {
@@ -61,7 +61,7 @@ typedef struct {
 	unsigned char alpha;
 } palent_t;
 
-typedef struct {
+struct edit_plte_ctx {
 	int numplte;
 	int minplte;
 	int maxplte;
@@ -72,20 +72,33 @@ typedef struct {
 	unsigned char     bkgd;
 	unsigned char     trnscolor; // only used for grayscale images
 
-	HWND hwnd; // hack
+	HWND hwnd;
 	int bkgdbuttonstate;
 	int alphabuttonstate;
 
 	int caneditcolors; // can palette colors be edited? (not if grayscale)
-}  palette_info_struct_t;
 
+	HWND hwndEditPal;
+	int border_buttonoffset;
+	int border_editx;
+	int border_edity;
+	int border_btn1y;
+	int border_btn2y;
+	int color_left;
+	int border_width;
+	int border_height;
+	int color_top;
+
+	int item_w, item_h;  // size in pixels of each box
+	int curr_i;
+};
 
 typedef struct {
 	int id;
 	char *name;
 } chunk_id_struct_t;
 
-static chunk_id_struct_t chunk_id_list[] = {
+static const chunk_id_struct_t chunk_id_list[] = {
 	{CHUNK_IHDR,"IHDR"},
 	{CHUNK_IEND,"IEND"},
 	{CHUNK_IDAT,"IDAT"},
@@ -163,7 +176,6 @@ int Chunk::is_safe_to_copy(void)  { return (m_chunktype_ascii[3]&0x20)?1:0; }
 
 static DWORD get_uncompressed_size(unsigned char *datain, int inlen)
 {
-	static int blksize = 16384;
 	unsigned char dbuf[16384];
 	int data_read=0;
 	int err;
@@ -180,7 +192,7 @@ static DWORD get_uncompressed_size(unsigned char *datain, int inlen)
 
 	while(1) {
 		z.next_out = dbuf;
-		z.avail_out = blksize;
+		z.avail_out = sizeof(dbuf);
 		err = inflate(&z, Z_NO_FLUSH);
 		if(err == Z_STREAM_END) break;
 		if(err != Z_OK) {
@@ -417,7 +429,7 @@ int Chunk::edit_plte_info(void)
 	Chunk *ch_plte;
 	Chunk *ch_trns;
 	Chunk *ch_bkgd;
-	palette_info_struct_t pal_info;
+	struct edit_plte_ctx pal_info;
 	int maxpal;
 	int i;
 	INT_PTR changed;
@@ -428,6 +440,7 @@ int Chunk::edit_plte_info(void)
 	ch_plte=ch_trns=ch_bkgd=NULL;
 	grayscale= (m_parentpng->m_colortype==0 || m_parentpng->m_colortype==4);
 
+	ZeroMemory((void*)&pal_info,sizeof(struct edit_plte_ctx));
 	for(i=0;i<256;i++) {
 		pal_info.plte[i].red   = 0;
 		pal_info.plte[i].green = 0;
@@ -443,6 +456,10 @@ int Chunk::edit_plte_info(void)
 	pal_info.alphabuttonstate=0;
 	pal_info.caneditcolors=1;
 	pal_info.trnscolor=0;
+
+	pal_info.item_w=1;
+	pal_info.item_h=1;
+	pal_info.curr_i= -1;
 
 	maxpal= 1<<m_parentpng->m_bitdepth;
 
@@ -597,13 +614,29 @@ int Chunk::can_edit()
 	return can_edit_chunk_type(m_chunktype_id);
 }
 
+struct textdlgmetrics {
+	int border_buttonoffset;
+	int border_editx;
+	int border_edity;
+	int border_btn1y;
+	int border_btn2y;
+};
+
+struct edit_chunk_ctx {
+	Chunk *ch;
+	struct textdlgmetrics tdm;
+};
+
 // return 1 if changed, 2 if changed multiple chunks
 int Chunk::edit(void)
 {
+	struct edit_chunk_ctx ecctx;
 	INT_PTR changed=0;
 
 	// The editor for most chunks can't handle invalid chunks very well.
 	if(!has_valid_length()) return 0;
+	ZeroMemory((void*)&ecctx,sizeof(struct edit_chunk_ctx));
+	ecctx.ch = this;
 
 	globals.dlgs_open++;
 
@@ -616,29 +649,29 @@ int Chunk::edit(void)
 	case CHUNK_iTXt:
 #endif
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_TEXT"),globals.hwndMain,
-		    DlgProcEdit_tEXt, (LPARAM)this);
+		    DlgProcEdit_tEXt, (LPARAM)&ecctx);
 		break;
 
 	case CHUNK_IHDR:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_IHDR"),globals.hwndMain,
-			Chunk::DlgProcEditChunk, (LPARAM)this);
+			Chunk::DlgProcEditChunk, (LPARAM)&ecctx);
 		if(changed>0) { after_init(); changed=2; }
 		break;
 	case CHUNK_gAMA:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_GAMA"),globals.hwndMain,
-		    DlgProcEditChunk, (LPARAM)this);
+		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 	case CHUNK_sRGB:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_SRGB"),globals.hwndMain,
-		    DlgProcEditChunk, (LPARAM)this);
+		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 	case CHUNK_pHYs:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_PHYS"),globals.hwndMain,
-		    DlgProcEditChunk, (LPARAM)this);
+		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 	case CHUNK_cHRM:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_CHRM"),globals.hwndMain,
-		    DlgProcEditChunk, (LPARAM)this);
+		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 	case CHUNK_bKGD:
 		switch(m_parentpng->m_colortype) {
@@ -648,7 +681,7 @@ int Chunk::edit(void)
 		case 0: case 4:  // grayscale
 			if(m_parentpng->m_bitdepth<=8) goto plte_start;
 			changed=  DialogBoxParam(globals.hInst,_T("DLG_NUMBER1"),globals.hwndMain,
-				DlgProcEditChunk, (LPARAM)this);
+				DlgProcEditChunk, (LPARAM)&ecctx);
 			break;
 		case 2: case 6:  // rgb
 			if(m_parentpng->m_bitdepth==8) {
@@ -666,7 +699,7 @@ int Chunk::edit(void)
 			}
 			else {
 				changed=  DialogBoxParam(globals.hInst,_T("DLG_COLOR3"),globals.hwndMain,
-					DlgProcEditChunk, (LPARAM)this);
+					DlgProcEditChunk, (LPARAM)&ecctx);
 			}
 			break;
 		}
@@ -676,19 +709,19 @@ int Chunk::edit(void)
 		switch(m_parentpng->m_colortype) {
 		case 0:   // grayscale
 			changed=  DialogBoxParam(globals.hInst,_T("DLG_NUMBER1"),globals.hwndMain,
-				DlgProcEditChunk, (LPARAM)this);
+				DlgProcEditChunk, (LPARAM)&ecctx);
 			break;
 		case 2: case 3:  // rbg or paletted
 			changed=  DialogBoxParam(globals.hInst,_T("DLG_COLOR3"),globals.hwndMain,
-				DlgProcEditChunk, (LPARAM)this);
+				DlgProcEditChunk, (LPARAM)&ecctx);
 			break;
 		case 4:  // grayscale+alpha
 			changed=  DialogBoxParam(globals.hInst,_T("DLG_COLOR2"),globals.hwndMain,
-				DlgProcEditChunk, (LPARAM)this);
+				DlgProcEditChunk, (LPARAM)&ecctx);
 			break;
 		case 6:  // rgba
 			changed=  DialogBoxParam(globals.hInst,_T("DLG_COLOR4"),globals.hwndMain,
-				DlgProcEditChunk, (LPARAM)this);
+				DlgProcEditChunk, (LPARAM)&ecctx);
 			break;
 		}
 		break;
@@ -700,11 +733,11 @@ int Chunk::edit(void)
 		case 0:  // grayscale
 			if(m_parentpng->m_colortype==0 && m_parentpng->m_bitdepth<=8) goto plte_start;
 			changed=  DialogBoxParam(globals.hInst,_T("DLG_NUMBER1"),globals.hwndMain,
-				DlgProcEditChunk, (LPARAM)this);
+				DlgProcEditChunk, (LPARAM)&ecctx);
 			break;
 		case 2:  // rgb
 			changed=  DialogBoxParam(globals.hInst,_T("DLG_COLOR3"),globals.hwndMain,
-				DlgProcEditChunk, (LPARAM)this);
+				DlgProcEditChunk, (LPARAM)&ecctx);
 			break;
 		}
 		break;
@@ -716,37 +749,37 @@ plte_start:
 
 	case CHUNK_tIME:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_TIME"),globals.hwndMain,
-		    DlgProcEditChunk, (LPARAM)this);
+		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 
 	case CHUNK_sTER:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_STER"),globals.hwndMain,
-		    DlgProcEditChunk, (LPARAM)this);
+		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 
 	case CHUNK_acTL:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_ACTL"),globals.hwndMain,
-		    DlgProcEditChunk, (LPARAM)this);
+		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 
 	case CHUNK_fcTL:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_FCTL"),globals.hwndMain,
-		    DlgProcEditChunk, (LPARAM)this);
+		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 
 	case CHUNK_fdAT:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_NUMBER1"),globals.hwndMain,
-		    DlgProcEditChunk, (LPARAM)this);
+		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 
 	case CHUNK_oFFs:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_OFFS"),globals.hwndMain,
-		    DlgProcEditChunk, (LPARAM)this);
+		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 
 	case CHUNK_sCAL:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_SCAL"),globals.hwndMain,
-		    DlgProcEditChunk, (LPARAM)this);
+		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 	}
 
@@ -1980,14 +2013,6 @@ static void GetPosInParent(HWND hwnd,RECT *rc)
 	rc->bottom -= p.y;
 }
 
-struct textdlgmetrics { // fixme: this is stupid
-	int border_buttonoffset;
-	int border_editx;
-	int border_edity;
-	int border_btn1y;
-	int border_btn2y;
-};
-
 static int Dlg_tEXt_InitDialog(HWND hwnd, Chunk *ch, struct textdlgmetrics *tdm)
 {
 	int i;
@@ -2116,19 +2141,26 @@ static void Dlg_tEXt_OK(HWND hwnd, Chunk *ch)
 static INT_PTR CALLBACK DlgProcEdit_tEXt(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	WORD id;
-	static Chunk *ch=NULL;
-	static struct textdlgmetrics tdm = {0,0,0,0,0};
+	Chunk *ch = NULL;
 
 	RECT rd,r1;
+	struct edit_chunk_ctx *ecctx = NULL;
 
 	id=LOWORD(wParam);
 
-	switch (msg) {
-	case WM_INITDIALOG:
-		ch = (Chunk*)lParam;
-		if(!ch) return 1;
-		return Dlg_tEXt_InitDialog(hwnd,ch,&tdm);
+	if(msg==WM_INITDIALOG) {
+		ecctx = (struct edit_chunk_ctx*)lParam;
+		if(!ecctx) return 1;
+		SetWindowLongPtr(hwnd,DWLP_USER,lParam);
+		return Dlg_tEXt_InitDialog(hwnd,ecctx->ch,&ecctx->tdm);
+	}
+	else {
+		ecctx = (struct edit_chunk_ctx*)GetWindowLongPtr(hwnd,DWLP_USER);
+		if(!ecctx) return 0;
+		ch = ecctx->ch;
+	}
 
+	switch (msg) {
 	case WM_GETMINMAXINFO:
 		{
 			LPMINMAXINFO mm;
@@ -2144,14 +2176,14 @@ static INT_PTR CALLBACK DlgProcEdit_tEXt(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
 			GetClientRect(hwnd,&rd);
 
-			SetWindowPos(GetDlgItem(hwnd,IDOK),NULL,rd.right-tdm.border_buttonoffset,tdm.border_btn1y,0,0,SWP_NOSIZE|SWP_NOZORDER);
-			SetWindowPos(GetDlgItem(hwnd,IDCANCEL),NULL,rd.right-tdm.border_buttonoffset,tdm.border_btn2y,0,0,SWP_NOSIZE|SWP_NOZORDER);
+			SetWindowPos(GetDlgItem(hwnd,IDOK),NULL,rd.right-ecctx->tdm.border_buttonoffset,ecctx->tdm.border_btn1y,0,0,SWP_NOSIZE|SWP_NOZORDER);
+			SetWindowPos(GetDlgItem(hwnd,IDCANCEL),NULL,rd.right-ecctx->tdm.border_buttonoffset,ecctx->tdm.border_btn2y,0,0,SWP_NOSIZE|SWP_NOZORDER);
 
 			h=GetDlgItem(hwnd,IDC_TEXTTEXT);
 			GetPosInParent(h,&r1);
 			SetWindowPos(h,NULL,0,0,
-				(rd.right-rd.left)-r1.left-tdm.border_editx,
-				(rd.bottom-rd.top)-r1.top-tdm.border_edity,
+				(rd.right-rd.left)-r1.left-ecctx->tdm.border_editx,
+				(rd.bottom-rd.top)-r1.top-ecctx->tdm.border_edity,
 				SWP_NOMOVE|SWP_NOZORDER);
 
 		}
@@ -2259,20 +2291,18 @@ void Chunk::process_sCAL_dlg(HWND hwnd)
 // type is even uglier IMHO.
 INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	static Chunk *ch=NULL;
+	struct edit_chunk_ctx *p = NULL;
+	Chunk *ch=NULL;
 	WORD id,code;
 	double tmpdbl;
 	int tmpint1,tmpint2,i;
 	TCHAR buf[500];
 
-	id=LOWORD(wParam);
-	code=HIWORD(wParam);
-
-	switch (msg) {
-	case WM_INITDIALOG:
-		ch = (Chunk*)lParam;
-
-		if(!ch) return 1;
+	if(msg==WM_INITDIALOG) {
+		p = (struct edit_chunk_ctx*)lParam;
+		if(!p) return 1;
+		SetWindowLongPtr(hwnd,DWLP_USER,lParam);
+		ch = p->ch;
 
 		switch(ch->m_chunktype_id) {
 		case CHUNK_IHDR:
@@ -2470,7 +2500,17 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 			break;
 		}
 		return 1;
+	}
+	else {
+		p = (struct edit_chunk_ctx*)GetWindowLongPtr(hwnd,DWLP_USER);
+		if(!p) return FALSE;
+		ch = p->ch;
+	}
 
+	id=LOWORD(wParam);
+	code=HIWORD(wParam);
+
+	switch (msg) {
 	case WM_DESTROY:
 		ch=NULL;
 		break;
@@ -2704,14 +2744,14 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 #define EDITPAL_MARGIN 3
 
 // set i to -1 to clear values
-static void update_irgba(HWND hwnd,int i,int r,int g,int b,int a,int aflag, int force)
+static void update_irgba(struct edit_plte_ctx *p,HWND hwnd,
+	int i,int r,int g,int b,int a,int aflag, int force)
 {
-	static int curr_i= -1;
 	TCHAR buf_i[20],buf_r[20],buf_g[20],buf_b[20],buf_a[20];
 
-	if(i==curr_i && !force) return;
+	if(i==p->curr_i && !force) return;
 	if(i<0) i= -1;
-	curr_i=i;
+	p->curr_i=i;
 
 	if(i<0) {
 		StringCchPrintf(buf_i,20,_T("I:"));
@@ -2738,7 +2778,7 @@ static void update_irgba(HWND hwnd,int i,int r,int g,int b,int a,int aflag, int 
 	SetDlgItemText(hwnd,IDC_STATIC_A,buf_a);
 }
 
-static void update_irgba_byindex(palette_info_struct_t *p, HWND hwnd, int c, int force)
+static void update_irgba_byindex(struct edit_plte_ctx *p, HWND hwnd, int c, int force)
 {
 	int tmp_a, tmp_aflag;
 	if(p->caneditcolors) {
@@ -2755,7 +2795,7 @@ static void update_irgba_byindex(palette_info_struct_t *p, HWND hwnd, int c, int
 			tmp_aflag=1;
 		}
 	}
-	update_irgba(hwnd,c,p->plte[c].red,p->plte[c].green,p->plte[c].blue,
+	update_irgba(p,hwnd,c,p->plte[c].red,p->plte[c].green,p->plte[c].blue,
 		tmp_a,tmp_aflag,force);
 }
 
@@ -2784,13 +2824,22 @@ static int where_is_cursor(int x,int y, int item_w, int item_h, int maxval)
 // palette window that shows the palette colors, not the dialog box.
 LRESULT CALLBACK WndProcEditPal(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	static palette_info_struct_t *p = NULL;
-	static int item_w=1, item_h=1; // size in pixels of each box
-	static HWND hwndParent;
+	struct edit_plte_ctx *p = NULL;
 	int c;
 	unsigned char cr,cg,cb;
 	TCHAR buf[100];
 
+	if(msg==WM_CREATE) {
+		LPCREATESTRUCT lpcs;
+		lpcs = (LPCREATESTRUCT)lParam;
+		p = (struct edit_plte_ctx*) lpcs->lpCreateParams;
+		SetWindowLongPtr(hwnd,GWLP_USERDATA,(LONG_PTR)lpcs->lpCreateParams);
+		return 0;
+	}
+	else {
+		p = (struct edit_plte_ctx*)GetWindowLongPtr(hwnd,GWLP_USERDATA);
+		if(!p) goto done;
+	}
 
 	switch(msg) {
 
@@ -2801,30 +2850,21 @@ LRESULT CALLBACK WndProcEditPal(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 		}
 		break;
 
-	case WM_CREATE:
-		{
-			LPCREATESTRUCT lpcs;
-			lpcs = (LPCREATESTRUCT)lParam;
-			p = (palette_info_struct_t*) lpcs->lpCreateParams;
-			hwndParent= GetParent(hwnd);
-		}
-		return 0;
-
 	case WM_MOUSEMOVE:
 		c= where_is_cursor((int)(LOWORD(lParam)),(int)(HIWORD(lParam)),
-			item_w,item_h, p->numplte);
+			p->item_w,p->item_h, p->numplte);
 		if(c<0) {
-			update_irgba(hwndParent,c,0,0,0,0,0,0);
+			update_irgba(p,p->hwnd,c,0,0,0,0,0,0);
 		}
 		else {
-			update_irgba_byindex(p,hwndParent,c,0);
+			update_irgba_byindex(p,p->hwnd,c,0);
 		}
 		return 0;
 
 	case WM_LBUTTONDOWN:
 
 		c= where_is_cursor((int)(LOWORD(lParam)),(int)(HIWORD(lParam)),
-			item_w,item_h, p->numplte);
+			p->item_w,p->item_h, p->numplte);
 		if(c<0) return 0;
 
 
@@ -2837,7 +2877,7 @@ LRESULT CALLBACK WndProcEditPal(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 			InvalidateRect(hwnd,NULL,TRUE);
 		}
 		else if(p->alphabuttonstate) {
-			get_int_struct_t st;
+			struct get_int_ctx st;
 
 			if(p->caneditcolors) {
 				if(c>=p->numtrns) return 0;
@@ -2851,13 +2891,13 @@ LRESULT CALLBACK WndProcEditPal(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 					if(st.value<0) st.value=0;
 					if(st.value>255) st.value=255;
 					p->plte[c].alpha=(unsigned char)st.value;
-					update_irgba(hwndParent,-2,0,0,0,0,0, 0); // clear
+					update_irgba(p,p->hwnd,-2,0,0,0,0,0, 0); // clear
 					InvalidateRect(hwnd,NULL,TRUE);
 				}
 			}
 			else {
 				p->trnscolor=c;
-				update_irgba_byindex(p,hwndParent,c,1);
+				update_irgba_byindex(p,p->hwnd,c,1);
 				InvalidateRect(hwnd,NULL,TRUE);
 			}
 
@@ -2890,23 +2930,23 @@ LRESULT CALLBACK WndProcEditPal(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 			GetClientRect(hwnd,&rect);
 
-			item_w= (rect.right-EDITPAL_MARGIN*2)/16;
+			p->item_w= (rect.right-EDITPAL_MARGIN*2)/16;
 			if(p->maxplte>16) {
-				item_h= (rect.bottom-EDITPAL_MARGIN*2)/16;
+				p->item_h= (rect.bottom-EDITPAL_MARGIN*2)/16;
 			}
 			else {
-				item_h= (rect.bottom-EDITPAL_MARGIN*2);
+				p->item_h= (rect.bottom-EDITPAL_MARGIN*2);
 			}
 
 			// indicate background palette entry
 			if(p->numbkgd>0) {
-				xp= (p->bkgd%16)*item_w + EDITPAL_MARGIN;
-				yp= (p->bkgd/16)*item_h + EDITPAL_MARGIN;
+				xp= (p->bkgd%16)*p->item_w + EDITPAL_MARGIN;
+				yp= (p->bkgd/16)*p->item_h + EDITPAL_MARGIN;
 
 				SelectObject(hdc,GetStockObject(NULL_PEN));
 				hbrush=CreateSolidBrush(RGB(0,0,255));
 				SelectObject(hdc,hbrush);
-				Rectangle(hdc,xp,yp,xp+item_w+1,yp+item_h+1);
+				Rectangle(hdc,xp,yp,xp+p->item_w+1,yp+p->item_h+1);
 
 				SelectObject(hdc,GetStockObject(NULL_BRUSH));   // fixme
 				DeleteObject(hbrush);
@@ -2914,11 +2954,11 @@ LRESULT CALLBACK WndProcEditPal(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 			SelectObject(hdc,GetStockObject(BLACK_PEN));
 			for(i=0; i<p->numplte; i++) {
-				xp= (i%16)*item_w + EDITPAL_MARGIN;
-				yp= (i/16)*item_h + EDITPAL_MARGIN;
+				xp= (i%16)*p->item_w + EDITPAL_MARGIN;
+				yp= (i/16)*p->item_h + EDITPAL_MARGIN;
 				hbrush=CreateSolidBrush(RGB(p->plte[i].red,p->plte[i].green,p->plte[i].blue));
 				SelectObject(hdc,hbrush);
-				Rectangle(hdc,xp+1,yp+2,xp+item_w-1,yp+item_h-2);
+				Rectangle(hdc,xp+1,yp+2,xp+p->item_w-1,yp+p->item_h-2);
 				SelectObject(hdc,GetStockObject(NULL_BRUSH));   // fixme
 				DeleteObject(hbrush);
 			}
@@ -2939,22 +2979,22 @@ LRESULT CALLBACK WndProcEditPal(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 					i_alpha=0;
 				}
 
-				xp= (i_index%16)*item_w + EDITPAL_MARGIN;
-				yp= (i_index/16)*item_h + EDITPAL_MARGIN;
+				xp= (i_index%16)*p->item_w + EDITPAL_MARGIN;
+				yp= (i_index/16)*p->item_h + EDITPAL_MARGIN;
 
-				pos= (int)( (double)(item_w-2.1)* ((double)i_alpha / 255.0) );
+				pos= (int)( (double)(p->item_w-2.1)* ((double)i_alpha / 255.0) );
 
 				if(i_alpha==0) SelectObject(hdc,hpen3);
 				else if(i_alpha==255) SelectObject(hdc,hpen1);
 				else SelectObject(hdc,hpen2);
 
-				MoveToEx(hdc,xp+1+pos,yp+item_h-7,NULL);
-				LineTo(hdc,xp+1+pos,yp+item_h+0);
+				MoveToEx(hdc,xp+1+pos,yp+p->item_h-7,NULL);
+				LineTo(hdc,xp+1+pos,yp+p->item_h+0);
 
-				MoveToEx(hdc,xp+0+pos,yp+item_h-6,NULL);
-				LineTo(hdc,xp+0+pos,yp+item_h-1);
-				MoveToEx(hdc,xp+2+pos,yp+item_h-6,NULL);
-				LineTo(hdc,xp+2+pos,yp+item_h-1);
+				MoveToEx(hdc,xp+0+pos,yp+p->item_h-6,NULL);
+				LineTo(hdc,xp+0+pos,yp+p->item_h-1);
+				MoveToEx(hdc,xp+2+pos,yp+p->item_h-6,NULL);
+				LineTo(hdc,xp+2+pos,yp+p->item_h-1);
 			}
 			SelectObject(hdc,GetStockObject(NULL_PEN));
 			DeleteObject(hpen1);
@@ -2967,11 +3007,12 @@ LRESULT CALLBACK WndProcEditPal(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 	}
 
+done:
 	return (DefWindowProc(hwnd, msg, wParam, lParam));
 }
 
 
-static void set_pal_labels(HWND hwnd,palette_info_struct_t *p)
+static void set_pal_labels(HWND hwnd,struct edit_plte_ctx *p)
 {
 	TCHAR buf[256];
 	if(p->caneditcolors)
@@ -2991,18 +3032,7 @@ static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hwnd, UINT msg, WPARAM wParam, LPA
 {
 	WORD id, code;
 	int r;
-	static palette_info_struct_t *p = NULL;
-	static HWND hwndEditPal = NULL;
-
-	static int border_buttonoffset=0;
-	static int border_editx=0;
-	static int border_edity=0;
-	static int border_btn1y=0;
-	static int border_btn2y=0;
-	static int color_left=0;
-	static int border_width=0;
-	static int border_height=0;
-	static int color_top=0;
+	struct edit_plte_ctx *p = NULL;
 
 	RECT rd,r1;
 
@@ -3010,46 +3040,48 @@ static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hwnd, UINT msg, WPARAM wParam, LPA
 	id=LOWORD(wParam);
 	code=HIWORD(wParam);
 
-	switch (msg) {
-	case WM_INITDIALOG:
 
-		p = (palette_info_struct_t*)lParam;
+	if(msg==WM_INITDIALOG) {
+		p = (struct edit_plte_ctx*)lParam;
+		if(!p) return TRUE;
+		SetWindowLongPtr(hwnd,DWLP_USER,lParam);
+
 		SendMessage(hwnd,WM_SETICON,ICON_BIG,(LPARAM)LoadIcon(globals.hInst,_T("ICONMAIN")));
 
 		// save some control position metrics for later resizing
 		GetClientRect(hwnd,&rd);
 
 		GetPosInParent(GetDlgItem(hwnd,IDC_STATIC1),&r1);
-		border_width=r1.left;
+		p->border_width=r1.left;
 
 		GetPosInParent(GetDlgItem(hwnd,IDC_EDIT2),&r1);
-		color_top= r1.bottom + 5;
+		p->color_top= r1.bottom + 5;
 
 		GetPosInParent(GetDlgItem(hwnd,IDC_STATIC_A),&r1);
-		color_left=r1.right+3;
+		p->color_left=r1.right+3;
 
 		GetPosInParent(GetDlgItem(hwnd,IDOK),&r1);
-		border_buttonoffset = (rd.right-rd.left)-r1.left;
-		border_btn1y = r1.top;
-		border_height=r1.top;
+		p->border_buttonoffset = (rd.right-rd.left)-r1.left;
+		p->border_btn1y = r1.top;
+		p->border_height=r1.top;
 
 		GetPosInParent(GetDlgItem(hwnd,IDCANCEL),&r1);
-		border_btn2y = r1.top;
+		p->border_btn2y = r1.top;
 
 //		GetPosInParent(hwndEditPal,&r1);
 //		border_editx = (rd.right-rd.left)-r1.right;
 //		border_edity = (rd.bottom-rd.top)-r1.bottom;
 
 		//g_editpal_palinfo_pointer = p;
-		hwndEditPal = CreateWindow(
+		p->hwndEditPal = CreateWindow(
 			_T("TWEAKPNGEDITPAL"),_T("EditPal"),
 			WS_VISIBLE|WS_CHILD|WS_BORDER,
-			color_left,color_top,rd.right-border_width-color_left,
-			rd.bottom-color_top-border_height,
+			p->color_left,p->color_top,rd.right-p->border_width-p->color_left,
+			rd.bottom-p->color_top-p->border_height,
 			hwnd,NULL,globals.hInst,(void*)p);
 
 		set_pal_labels(hwnd,p);
-		update_irgba(hwnd,-2,0,0,0,0,0,0);
+		update_irgba(p,hwnd,-2,0,0,0,0,0,0);
 
 		SendDlgItemMessage(hwnd,IDC_EDIT1,EM_LIMITTEXT,3,0);
 		SendDlgItemMessage(hwnd,IDC_EDIT2,EM_LIMITTEXT,3,0);
@@ -3076,18 +3108,23 @@ static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		if(globals.window_prefs.plte.max) ShowWindow(hwnd,SW_SHOWMAXIMIZED);
 
 		return TRUE;
+	}
+	else {
+		p = (struct edit_plte_ctx*)GetWindowLongPtr(hwnd,DWLP_USER);
+		if(!p) return FALSE;
+	}
 
-
+	switch (msg) {
 	case WM_SIZE:
 
 		GetClientRect(hwnd,&rd);
 
-		SetWindowPos(GetDlgItem(hwnd,IDOK),NULL,rd.right-border_buttonoffset,border_btn1y,0,0,SWP_NOSIZE|SWP_NOZORDER);
-		SetWindowPos(GetDlgItem(hwnd,IDCANCEL),NULL,rd.right-border_buttonoffset,border_btn2y,0,0,SWP_NOSIZE|SWP_NOZORDER);
+		SetWindowPos(GetDlgItem(hwnd,IDOK),NULL,rd.right-p->border_buttonoffset,p->border_btn1y,0,0,SWP_NOSIZE|SWP_NOZORDER);
+		SetWindowPos(GetDlgItem(hwnd,IDCANCEL),NULL,rd.right-p->border_buttonoffset,p->border_btn2y,0,0,SWP_NOSIZE|SWP_NOZORDER);
 
-		SetWindowPos(hwndEditPal,NULL,
-		color_left, color_top, 
-		rd.right-border_width-color_left, rd.bottom-color_top-border_height,
+		SetWindowPos(p->hwndEditPal,NULL,
+		p->color_left, p->color_top, 
+		rd.right-p->border_width-p->color_left, rd.bottom-p->color_top-p->border_height,
 			SWP_NOMOVE|SWP_NOZORDER);
 		return 1;
 
@@ -3113,7 +3150,7 @@ static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hwnd, UINT msg, WPARAM wParam, LPA
 				if(r>p->maxplte) r=p->maxplte;
 				p->numplte=r;
 				set_pal_labels(hwnd,p);
-				InvalidateRect(hwndEditPal,NULL,TRUE);
+				InvalidateRect(p->hwndEditPal,NULL,TRUE);
 				return 1;
 			}
 			break;
@@ -3124,7 +3161,7 @@ static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hwnd, UINT msg, WPARAM wParam, LPA
 				if(r>p->maxplte) r=p->maxplte;
 				p->numtrns=r;
 				set_pal_labels(hwnd,p);
-				InvalidateRect(hwndEditPal,NULL,TRUE);
+				InvalidateRect(p->hwndEditPal,NULL,TRUE);
 				return 1;
 			}
 			break;
@@ -3159,7 +3196,7 @@ static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hwnd, UINT msg, WPARAM wParam, LPA
 			break;
 		case IDC_EDITALLALPHA:
 			{
-				get_int_struct_t st;
+				struct get_int_ctx st;
 				int i;
 
 				st.value=255;
@@ -3195,19 +3232,26 @@ static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hwnd, UINT msg, WPARAM wParam, LPA
 // returns 1 if successful, 0 if user canceled
 static INT_PTR CALLBACK DlgProcGetInt(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	static get_int_struct_t *st;
+	struct get_int_ctx *st = NULL;
 	WORD id;
 
-	id=LOWORD(wParam);
-
-	switch (msg) {
-	case WM_INITDIALOG:
-		st = (get_int_struct_t*)lParam;
+	if(msg==WM_INITDIALOG) {
+		st = (struct get_int_ctx*)lParam;
+		if(!st) return 1;
+		SetWindowLongPtr(hwnd,DWLP_USER,lParam);
 		SetWindowText(hwnd,st->title);
 		SetDlgItemText(hwnd,IDC_LABEL1,st->label);
 		SetDlgItemInt(hwnd,IDC_EDIT1,st->value,TRUE);
 		return 1;
+	}
+	else {
+		st = (struct get_int_ctx*)GetWindowLongPtr(hwnd,DWLP_USER);
+		if(!st) return 0;
+	}
 
+	id=LOWORD(wParam);
+
+	switch (msg) {
 	case WM_COMMAND:
 		if(!st) return 1;
 		switch(id) {
