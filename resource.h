@@ -11,7 +11,6 @@
 #define IDC_EDIT2                       1007
 #define IDC_EDIT1                       1008
 #define IDC_RADIO0                      1009
-#define IDC_EDIT                        1009
 #define IDC_RADIO1                      1010
 #define IDC_RADIO2                      1011
 #define IDC_SRGB_3                      1012
@@ -21,20 +20,13 @@
 #define IDC_SPLIT_REPEAT                1016
 #define IDC_SPLIT_SIZE                  1017
 #define IDC_SPLIT_TEXT                  1018
-#define IDC_EDIT5                       1018
 #define IDC_LABEL1                      1019
-#define IDC_EDIT7                       1019
 #define IDC_EDIT3                       1020
 #define IDC_MONTH                       1021
-#define IDC_EDIT4                       1021
 #define IDC_YEAR                        1022
-#define IDC_EDIT6                       1022
 #define IDC_DAY                         1023
-#define IDC_EDIT8                       1023
 #define IDC_MINUTE                      1024
-#define IDC_EDITP4                      1024
 #define IDC_SECOND                      1025
-#define IDC_EDITP5                      1025
 #define IDC_HOUR                        1026
 #define IDC_BUTTON1                     1028
 #define IDC_RADIO3                      1029
@@ -82,6 +74,13 @@
 #define IDC_TOOL4BROWSE                 1080
 #define IDC_TOOL5BROWSE                 1081
 #define IDC_TOOL6BROWSE                 1082
+#define IDC_EDIT5                       1083
+#define IDC_EDIT7                       1084
+#define IDC_EDIT4                       1085
+#define IDC_EDIT6                       1086
+#define IDC_EDIT8                       1087
+#define IDC_EDITP4                      1088
+#define IDC_EDITP5                      1089
 #define ID_EXIT                         40001
 #define ID_OPEN                         40002
 #define ID_SAVEAS                       40003
@@ -150,7 +149,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        129
 #define _APS_NEXT_COMMAND_VALUE         40067
-#define _APS_NEXT_CONTROL_VALUE         1083
+#define _APS_NEXT_CONTROL_VALUE         1090
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
