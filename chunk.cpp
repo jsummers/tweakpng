@@ -167,9 +167,9 @@ static const chunk_id_struct_t chunk_id_list[] = {
 	{CHUNK_ORDR,"ORDR"},
 	{0,NULL}};
 
-int Chunk::is_critical(void)      { return (m_chunktype_ascii[0]&0x20)?0:1; }
-int Chunk::is_public(void)        { return (m_chunktype_ascii[1]&0x20)?0:1; }
-int Chunk::is_safe_to_copy(void)  { return (m_chunktype_ascii[3]&0x20)?1:0; }
+int Chunk::is_critical()      { return (m_chunktype_ascii[0]&0x20)?0:1; }
+int Chunk::is_public()        { return (m_chunktype_ascii[1]&0x20)?0:1; }
+int Chunk::is_safe_to_copy()  { return (m_chunktype_ascii[3]&0x20)?1:0; }
 
 
 #ifdef TWPNG_HAVE_ZLIB
@@ -424,7 +424,7 @@ int Chunk::init_from_memory(unsigned char *m, int msize)
 	return length+12;
 }
 
-int Chunk::edit_plte_info(void)
+int Chunk::edit_plte_info()
 {
 	Chunk *ch_plte;
 	Chunk *ch_trns;
@@ -628,7 +628,7 @@ struct edit_chunk_ctx {
 };
 
 // return 1 if changed, 2 if changed multiple chunks
-int Chunk::edit(void)
+int Chunk::edit()
 {
 	struct edit_chunk_ctx ecctx;
 	INT_PTR changed=0;
@@ -789,12 +789,12 @@ plte_start:
 }
 
 // call after you've changed a chunk
-void Chunk::chunkmodified(void)
+void Chunk::chunkmodified()
 {
 	m_crc=calc_crc();
 }
 
-DWORD Chunk::calc_crc(void)
+DWORD Chunk::calc_crc()
 {
 	DWORD ccrc;  // calculated crc
 
@@ -804,7 +804,7 @@ DWORD Chunk::calc_crc(void)
 	return ccrc;
 }
 
-int Chunk::get_chunk_type_id(void)
+int Chunk::get_chunk_type_id()
 {
 	int i;
 	for(i=0; chunk_id_list[i].id; i++) {
@@ -1942,7 +1942,7 @@ DWORD Chunk::copy_segment_to_memory(unsigned char *buf, DWORD offset, DWORD bufl
 	return pos_in_buf;
 }
 
-Chunk::Chunk(void)
+Chunk::Chunk()
 {
 	data=NULL;
 
@@ -1955,7 +1955,7 @@ Chunk::Chunk(void)
 	m_text_info.translated_keyword=NULL;
 }
 
-Chunk::~Chunk(void)
+Chunk::~Chunk()
 {
 	if(data) free(data);
 	free_text_info();
@@ -1980,7 +1980,7 @@ void Chunk::free_text_info()
 
 // call this after setting the data for the chunk
 // it may do some other initialization here..
-void Chunk::after_init(void)
+void Chunk::after_init()
 {
 	// set type id for convenience when testing chunk types
 	m_chunktype_id=get_chunk_type_id();

@@ -35,7 +35,7 @@ P2D* p2d_init(struct p2d_globals_struct *g);
 
 int   p2d_done(P2D *p2d);
 
-struct p2d_globals_struct *p2d_create_globals(void);
+struct p2d_globals_struct *p2d_create_globals();
 void p2d_destroy_globals(struct p2d_globals_struct *g);
 
 void   p2d_set_userdata(P2D *p2d, void *userdata);

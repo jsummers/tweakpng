@@ -1114,7 +1114,7 @@ void p2d_get_libpng_version(TCHAR *buf, int buflen)
 #endif
 }
 
-struct p2d_globals_struct *p2d_create_globals(void)
+struct p2d_globals_struct *p2d_create_globals()
 {
 	struct p2d_globals_struct *g;
 	g = (struct p2d_globals_struct *)calloc(1,sizeof(struct p2d_globals_struct));

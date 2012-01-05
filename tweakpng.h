@@ -224,7 +224,7 @@ void mesg(int severity, const TCHAR *fmt, ...);
 int choose_color_dialog(HWND hwnd, unsigned char *redp,
 						unsigned char *greenp, unsigned char *bluep);
 void DroppedFiles(HDROP hDrop);
-void update_status_bar_and_viewer(void);
+void update_status_bar_and_viewer();
 int can_edit_chunk_type(int ct);
 
 LRESULT CALLBACK WndProcEditPal(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -268,33 +268,33 @@ struct sCAL_data;
 
 class Chunk {
 public:
-	Chunk(void);
-	~Chunk(void);
+	Chunk();
+	~Chunk();
 
 	static INT_PTR CALLBACK DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-	void after_init(void);
+	void after_init();
 
 	int write_to_file(HANDLE fh, int exp);
 	void get_text_descr(TCHAR *buf, int buflen);    // buf must be 1000 chars or more
 	void get_text_descr_generic(TCHAR *buf, int buflen);    // buf must be 1000 chars or more
-	int get_chunk_type_id(void); // convert type into an integer
+	int get_chunk_type_id(); // convert type into an integer
 	int copy_to_memory(unsigned char *m);
 	DWORD copy_segment_to_memory(unsigned char *buf, DWORD offset, DWORD len);
 	int init_from_memory(unsigned char *buf, int);
 	void set_chunktype_tchar_from_ascii();
 	void free_text_info();
 
-	DWORD calc_crc(void);  // calculates CRC, does not modify it
+	DWORD calc_crc();  // calculates CRC, does not modify it
 
-	int edit(void);  // generic edit; calls the right edit_*() function
-	int can_edit(void);  // Can this chunk normally be edited?
+	int edit();  // generic edit; calls the right edit_*() function
+	int can_edit();  // Can this chunk normally be edited?
 
-	void chunkmodified(void);
+	void chunkmodified();
 
-	int is_critical(void);
-	int is_public(void);
-	int is_safe_to_copy(void);
+	int is_critical();
+	int is_public();
+	int is_safe_to_copy();
 
 	unsigned char *data;
 	DWORD length;     /* length of the DATA field */
@@ -338,7 +338,7 @@ private:
 	void describe_sCAL(TCHAR *buf, int buflen);
 	void describe_keyword_chunk(TCHAR *buf, int buflen, const TCHAR *prefix);
 
-	int edit_plte_info(void);
+	int edit_plte_info();
 #define TWPNG_FLAG_ASCIIFLOATINGPOINT 0x1
 	int read_text_field(int offset, TCHAR *buf, int buflen, unsigned int flags);
 	void get_sCAL_data(struct sCAL_data *d);
@@ -356,9 +356,9 @@ class Png {
 
 public:
 	Png(const TCHAR *load_fn, const TCHAR *save_fn);
-	Png(void);
+	Png();
 
-	~Png(void);
+	~Png();
 
 	int m_valid;
 
@@ -370,9 +370,9 @@ public:
 	void delete_chunk(int);
 	void move_chunk(int,int);
 
-	void modified(void); // only call if something really changed. also calls updatestbar
+	void modified(); // only call if something really changed. also calls updatestbar
 	
-	void set_signature(void);
+	void set_signature();
 	int check_validity(int msgmode);
 	void edit_chunk(int);
 	int split_idat(int cn, int size, int repeat);
@@ -395,7 +395,7 @@ public:
 	//unsigned char m_compressionfilter;
 	//unsigned char m_interlace;
 
-	int create_display_window(void);
+	int create_display_window();
 
 	Chunk **chunk;
 

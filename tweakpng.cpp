@@ -72,11 +72,11 @@ static INT_PTR CALLBACK DlgProcSetSig(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 static INT_PTR CALLBACK DlgProcTools(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static void SetLVSelection(HWND hwnd, int pos1, int num);
-static int OkToClosePNG(void);
+static int OkToClosePNG();
 static void SetTitle(Png *p);
 
 /* make the table for a fast crc */
-void make_crc_table(void)
+void make_crc_table()
 {
   int n;
 
@@ -249,7 +249,7 @@ DWORD Png::get_file_size()
 	return s;
 }
 
-static void update_status_bar_and_viewer(void)
+static void update_status_bar_and_viewer()
 {
 	TCHAR buf[100];
 	DWORD s;
@@ -280,7 +280,7 @@ done:
 	}
 }
 
-void Png::modified(void)
+void Png::modified()
 {
 	if(!m_dirty) {
 		m_dirty=1;
@@ -719,7 +719,7 @@ static const unsigned char sig_png[] = {137,80,78,71,13,10,26,10};
 static const unsigned char sig_mng[] = {138,77,78,71,13,10,26,10};
 static const unsigned char sig_jng[] = {139,74,78,71,13,10,26,10};
 
-void Png::set_signature(void)
+void Png::set_signature()
 {
 	switch(m_imgtype) {
 	case IMG_PNG: memcpy(signature,sig_png,8); break;
@@ -824,7 +824,7 @@ int Png::read_next_chunk(HANDLE fh)
 	return 1;
 }
 
-Png::Png(void)
+Png::Png()
 {
 	m_num_chunks=0;
 	chunk=NULL;
@@ -900,7 +900,7 @@ Png::Png(const TCHAR *load_fn, const TCHAR *save_fn)
 }
 
 
-Png::~Png(void)
+Png::~Png()
 {
 	int i;
 
@@ -916,7 +916,7 @@ Png::~Png(void)
 
 ///////////////////////////////////////////////////////////////////
 
-static int RegisterClasses(void)
+static int RegisterClasses()
 {
 	WNDCLASS  wc;
 
@@ -983,7 +983,7 @@ void twpng_SetWindowPos(HWND hwnd, const struct windowpos_struct *q)
 	SetWindowPlacement(hwnd,&wp);
 }
 
-static int SaveSettings(void)
+static int SaveSettings()
 {
 	HKEY key;
 	LONG r;
@@ -1036,7 +1036,7 @@ static int SaveSettings(void)
 	return 1;
 }
 
-static void ReadSettings(void)
+static void ReadSettings()
 {
 	HKEY key;
 	LONG r;
@@ -1256,7 +1256,7 @@ static void SetTitle(Png *p)
 }
 
 // Unconditionally close the current document, and update the UI.
-static void ClosePngDocument(void)
+static void ClosePngDocument()
 {
 	if(png) {
 		delete png;
@@ -1270,7 +1270,7 @@ static void ClosePngDocument(void)
 }
 
 // Unconditionally close the current document, and create a new empty document.
-static void NewPng(void)
+static void NewPng()
 {
 	if(png) {
 		delete png;
@@ -1344,7 +1344,7 @@ static int OpenPngFromMenu(HWND hwnd)
 	return OpenPngByName(fn);
 }
 
-static void ReopenPngDocument(void)
+static void ReopenPngDocument()
 {
 	TCHAR fn[MAX_PATH];
 	int x;
@@ -1663,7 +1663,7 @@ static int SavePng(HWND hwnd)
 	}
 }
 
-static void DeleteChunks(void)          // delete all selected items
+static void DeleteChunks()          // delete all selected items
 {
 	int i;
 	int numdeleted=0;
@@ -1740,7 +1740,7 @@ static int GetLVSelection(HWND hwnd)
 	return(-1);
 }
 
-static void PasteChunks(void)
+static void PasteChunks()
 {
 	DWORD msize=0;
 	HGLOBAL hClip;
@@ -1782,7 +1782,7 @@ static void PasteChunks(void)
 
 // returns 1 if any chunks were selected, and successfully copied
 // otherwize 0
-static int CopyChunks(void)
+static int CopyChunks()
 {
 	int i;
 	DWORD msize=0;
@@ -1824,14 +1824,14 @@ static int CopyChunks(void)
 	return 1;
 }
 
-static void CutChunks(void)
+static void CutChunks()
 {
 	if(CopyChunks()) {
 		DeleteChunks();
 	}
 }
 
-static void ImportChunk(void)
+static void ImportChunk()
 {
 	OPENFILENAME ofn;
 	TCHAR fn[MAX_PATH];
@@ -1892,7 +1892,7 @@ static void ImportChunk(void)
 	SetLVSelection(globals.hwndMainList,pos,1);
 }
 
-static void ExportChunk(void)
+static void ExportChunk()
 {
 	OPENFILENAME ofn;
 	TCHAR fn[MAX_PATH];
@@ -1935,7 +1935,7 @@ static void ExportChunk(void)
 	}
 }
 
-static void MoveChunkUp(void)
+static void MoveChunkUp()
 {
 	int i;
 
@@ -1965,7 +1965,7 @@ static void MoveChunkUp(void)
 }
 
 
-static void MoveChunkDown(void)
+static void MoveChunkDown()
 {
 	int i;
 
@@ -2067,7 +2067,7 @@ int Png::split_idat(int n, int ssize, int repeat)
 	return 1;
 }
 
-static void SplitIDAT(void)
+static void SplitIDAT()
 {
 	int n,id;
 	
@@ -2210,7 +2210,7 @@ static void CombineIDAT(int mode)
 	png->modified();
 }
 
-static void DblClickOnList(void)
+static void DblClickOnList()
 {
 	int s;
 
@@ -2578,7 +2578,7 @@ static void ContextMenu(HWND hwnd, int x, int y)
 	}
 }
 
-static int OkToClosePNG(void)
+static int OkToClosePNG()
 {
 	TCHAR buf[500];
 	int x,ret;
@@ -3068,7 +3068,7 @@ done:
 	return retval;
 }
 
-static int is_explorer_menu_set(void)
+static int is_explorer_menu_set()
 {
 	HKEY key1;
 	LONG rv;
@@ -3101,7 +3101,7 @@ static const TCHAR *fmts[] = { _T(".png"),_T(".mng"),_T(".jng") };
 static const TCHAR *dflt_fmt_name[] = { _T("png_auto_file"),_T("mng_auto_file"),_T("jng_auto_file") };
 
 // Add to Windows Explorer right-click menu for .[pmj]ng files.
-static void add_to_explorer_menu(void)
+static void add_to_explorer_menu()
 {
 	int i;
 	int x;
@@ -3162,7 +3162,7 @@ static void add_to_explorer_menu(void)
 	}
 }
 
-static void remove_from_explorer_menu(void)
+static void remove_from_explorer_menu()
 {
 	TCHAR logicalname[500];
 	TCHAR buf[500];
