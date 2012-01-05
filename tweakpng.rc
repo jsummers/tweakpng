@@ -812,7 +812,7 @@ BEGIN
             VALUE "FileDescription", "TweakPNG\0"
             VALUE "FileVersion", "1, 4, 2, 1\0"
             VALUE "InternalName", "tweakpng\0"
-            VALUE "LegalCopyright", "Copyright (C) 1999-2011 Jason Summers\0"
+            VALUE "LegalCopyright", "Copyright (C) 1999-2012 Jason Summers\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "tweakpng.exe\0"
             VALUE "PrivateBuild", "\0"

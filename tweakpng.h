@@ -27,7 +27,7 @@
 #endif
 
 #define TWEAKPNG_VER_STRING      _T("1.4.2")
-#define TWEAKPNG_COPYRIGHT_DATE  _T("1999") SYM_ENDASH _T("2011")
+#define TWEAKPNG_COPYRIGHT_DATE  _T("1999") SYM_ENDASH _T("2012")
 #define TWEAKPNG_HOMEPAGE        _T("http://entropymine.com/jason/tweakpng/")
 
 #define ID_STBAR      19000
