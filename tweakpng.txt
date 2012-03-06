@@ -1,6 +1,6 @@
 TweakPNG:  A low-level PNG image file manipulation utility
-Version 1.4.2 - 9 Aug 2011
-Copyright (c) 1999-2011 Jason Summers  <jason1@pobox.com>
+Version 1.4.3 - 6 Mar 2011
+Copyright (c) 1999-2012 Jason Summers  <jason1@pobox.com>
 
 ==================== License ====================
 
