@@ -44,8 +44,11 @@
 #define P2D_SM_B 2 // blue
 
 struct p2d_globals_struct {
+#if 0
 	p2d_byte *linear_to_srgb255_table;
-	p2d_byte *identity255_table;
+	p2d_byte *identity255_tablex;
+#endif
+	int x;
 };
 
 struct p2d_color255_struct {
@@ -110,7 +113,9 @@ struct p2d_struct {
 
 	double *src255_to_linear_table;
 	p2d_byte *src255_to_srgb255_table;
+#if 0
 	const p2d_byte *linear_to_srgb255_table;
+#endif
 
 	int dib_palette_entries;
 	int need_gray_palette;
@@ -341,6 +346,7 @@ static double linear_to_srgb_sample(double v_linear)
 
 static int p2d_make_global_tables(struct p2d_globals_struct *g)
 {
+#if 0
 	int n;
 	double val;
 
@@ -362,6 +368,7 @@ static int p2d_make_global_tables(struct p2d_globals_struct *g)
 			g->identity255_table[n] = n;
 		}
 	}
+#endif
 	return 1;
 }
 
@@ -374,12 +381,14 @@ static int p2d_make_color_correction_tables(P2D *p2d)
 
 	// TODO: We should only make the tables that we'll actually use.
 	p2d_make_global_tables(p2d->g);
+#if 0
 	if(p2d->color_correction_enabled) {
 		p2d->linear_to_srgb255_table = p2d->g->linear_to_srgb255_table;
 	}
 	else {
 		p2d->linear_to_srgb255_table = p2d->g->identity255_table;
 	}
+#endif
 
 	p2d->src255_to_linear_table = (double*)malloc(256*sizeof(double));
 	if(!p2d->src255_to_linear_table) return 0;
@@ -482,6 +491,7 @@ static int decode_strategy_rgba(P2D *p2d)
 	double lsample; // linear sample value;
 	double bsample; // linear sample, composited with background color
 	double a; // alpha value
+	p2d_byte a_int;
 	int k;
 
 	pngimage = (p2d_byte*)malloc(4*p2d->width*p2d->height);
@@ -496,17 +506,34 @@ static int decode_strategy_rgba(P2D *p2d)
 
 	for(j=0;j<p2d->height;j++) {
 		for(i=0;i<p2d->width;i++) {
-			a = ((double)pngrowpointers[j][i*4+3])/255.0;
+			a_int = pngrowpointers[j][i*4+3];
 
-			for(k=0;k<3;k++) {
-				lsample = p2d->src255_to_linear_table[pngrowpointers[j][i*4+k]];
-				bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[k];
+			if(a_int==255) {
+				// Fast path if fully opaque
+				for(k=0;k<3;k++) {
+					p2d->dib_row_pointers[j][i*3+2-k] = p2d->src255_to_srgb255_table[pngrowpointers[j][i*4+k]];
+				}
+			}
+			else if(a_int==0) {
+				// Fast path if fully transparent
+				for(k=0;k<3;k++) {
+					p2d->dib_row_pointers[j][i*3+2-k] = p2d->bkgd_color_applied_srgb.sm255[k];
+				}
+			}
+			else {
+				a = ((double)a_int)/255.0;
 
-				// TODO: This is not perfect.
-				// Instead of quantizing to the nearest linear color and then converting it to sRGB,
-				// we should use the quantized sRGB color that is nearest in a linear
-				// colorspace. There's no easy and efficient way to do that, though.
-				p2d->dib_row_pointers[j][i*3+2-k] = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+bsample*255.0)];
+				for(k=0;k<3;k++) {
+					lsample = p2d->src255_to_linear_table[pngrowpointers[j][i*4+k]];
+					bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[k];
+					// Fast, low quality:
+					//p2d->dib_row_pointers[j][i*3+2-k] = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+bsample*255.0)];
+					// Slow, high quality:
+					if(p2d->color_correction_enabled)
+						p2d->dib_row_pointers[j][i*3+2-k] = (p2d_byte)(0.5+255.0*linear_to_srgb_sample(bsample));
+					else
+						p2d->dib_row_pointers[j][i*3+2-k] = (p2d_byte)(0.5+255.0*bsample);
+				}
 			}
 		}
 	}
@@ -527,6 +554,7 @@ static int decode_strategy_graya(P2D *p2d, int tocolor)
 	double bsample; // linear sample, composited with background color
 	double a; // alpha value
 	int k;
+	p2d_byte a_int, gray_int;
 
 	pngimage = (p2d_byte*)malloc(2*p2d->width*p2d->height);
 	if(!pngimage) goto done;
@@ -540,18 +568,58 @@ static int decode_strategy_graya(P2D *p2d, int tocolor)
 
 	for(j=0;j<p2d->height;j++) {
 		for(i=0;i<p2d->width;i++) {
-			lsample = p2d->src255_to_linear_table[pngrowpointers[j][i*2]];
-			a = ((double)pngrowpointers[j][i*2+1])/255.0;
+			gray_int = pngrowpointers[j][i*2+0];
+			a_int    = pngrowpointers[j][i*2+1];
 
-			if(tocolor) {
-				for(k=0;k<3;k++) {
-					bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[k];
-					p2d->dib_row_pointers[j][i*3+2-k] = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+bsample*255.0)];
+			if(a_int==255) {
+				// Fully opaque
+				if(tocolor) {
+					for(k=0;k<3;k++) {
+						p2d->dib_row_pointers[j][i*3+2-k] = p2d->src255_to_srgb255_table[gray_int];
+					}
+				}
+				else {
+					p2d->dib_row_pointers[j][i] = p2d->src255_to_srgb255_table[gray_int];
+				}
+			}
+			else if(a_int==0) {
+				// Fully transparent
+				if(tocolor) {
+					for(k=0;k<3;k++) {
+						p2d->dib_row_pointers[j][i*3+2-k] = p2d->bkgd_color_applied_srgb.sm255[k];
+					}
+				}
+				else {
+					p2d->dib_row_pointers[j][i] = p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R];
 				}
 			}
 			else {
-				bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
-				p2d->dib_row_pointers[j][i] = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+bsample*255.0)];
+				// Partially transparent
+				lsample = p2d->src255_to_linear_table[gray_int];
+				a = ((double)a_int)/255.0;
+
+				if(tocolor) {
+					for(k=0;k<3;k++) {
+						bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[k];
+						// Fast, low quality:
+						//p2d->dib_row_pointers[j][i*3+2-k] = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+bsample*255.0)];
+						// Slow, high quality:
+						if(p2d->color_correction_enabled)
+							p2d->dib_row_pointers[j][i*3+2-k] = (p2d_byte)(0.5+255.0*linear_to_srgb_sample(bsample));
+						else
+							p2d->dib_row_pointers[j][i*3+2-k] = (p2d_byte)(0.5+255.0*bsample);
+					}
+				}
+				else {
+					bsample = a*lsample + (1.0-a)*p2d->bkgd_color_applied_linear.sm[P2D_SM_R];
+					// Fast, low quality:
+					//p2d->dib_row_pointers[j][i] = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+bsample*255.0)];
+					// Slow, high quality:
+					if(p2d->color_correction_enabled)
+						p2d->dib_row_pointers[j][i] = (p2d_byte)(0.5+255.0*linear_to_srgb_sample(bsample));
+					else
+						p2d->dib_row_pointers[j][i] = (p2d_byte)(0.5+255.0*bsample);
+				}
 			}
 		}
 	}
@@ -583,21 +651,38 @@ static int decode_strategy_palette(P2D *p2d)
 	// Copy the PNG palette to the DIB palette, handling color correction
 	// and transparency in the process.
 	for(i=0;i<p2d->dib_palette_entries;i++) {
-		lcolor.sm[P2D_SM_R] = p2d->src255_to_linear_table[p2d->pngf_palette[i].red];
-		lcolor.sm[P2D_SM_G] = p2d->src255_to_linear_table[p2d->pngf_palette[i].green];
-		lcolor.sm[P2D_SM_B] = p2d->src255_to_linear_table[p2d->pngf_palette[i].blue];
+		if(i>=num_trans || trans_alpha[i]==255) { // Fully opaque
+			p2d->dib_palette[i].rgbRed   = p2d->src255_to_srgb255_table[p2d->pngf_palette[i].red];
+			p2d->dib_palette[i].rgbGreen = p2d->src255_to_srgb255_table[p2d->pngf_palette[i].green];
+			p2d->dib_palette[i].rgbBlue  = p2d->src255_to_srgb255_table[p2d->pngf_palette[i].blue];
+		}
+		else if(trans_alpha[i]==0) { // Fully transparent
+			p2d->dib_palette[i].rgbRed   = p2d->bkgd_color_applied_srgb.sm255[P2D_SM_R];
+			p2d->dib_palette[i].rgbGreen = p2d->bkgd_color_applied_srgb.sm255[P2D_SM_G];
+			p2d->dib_palette[i].rgbBlue  = p2d->bkgd_color_applied_srgb.sm255[P2D_SM_B];
+		}
+		else { // Partially transparent
+			lcolor.sm[P2D_SM_R] = p2d->src255_to_linear_table[p2d->pngf_palette[i].red];
+			lcolor.sm[P2D_SM_G] = p2d->src255_to_linear_table[p2d->pngf_palette[i].green];
+			lcolor.sm[P2D_SM_B] = p2d->src255_to_linear_table[p2d->pngf_palette[i].blue];
 
-		// Apply background color
-		if(i < num_trans) {
+			// Apply background color
 			trns_alpha_1 = ((double)trans_alpha[i])/255.0;
 			for(k=0;k<3;k++) {
 				lcolor.sm[k] = trns_alpha_1*lcolor.sm[k] + (1.0-trns_alpha_1)*p2d->bkgd_color_applied_linear.sm[k];
 			}
-		}
 
-		p2d->dib_palette[i].rgbRed   = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+lcolor.sm[P2D_SM_R]*255.0)];
-		p2d->dib_palette[i].rgbGreen = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+lcolor.sm[P2D_SM_G]*255.0)];
-		p2d->dib_palette[i].rgbBlue  = p2d->linear_to_srgb255_table[(p2d_byte)(0.5+lcolor.sm[P2D_SM_B]*255.0)];
+			if(p2d->color_correction_enabled) {
+				p2d->dib_palette[i].rgbRed   = (p2d_byte)(0.5+255.0*linear_to_srgb_sample(lcolor.sm[P2D_SM_R]));
+				p2d->dib_palette[i].rgbGreen = (p2d_byte)(0.5+255.0*linear_to_srgb_sample(lcolor.sm[P2D_SM_G]));
+				p2d->dib_palette[i].rgbBlue  = (p2d_byte)(0.5+255.0*linear_to_srgb_sample(lcolor.sm[P2D_SM_B]));
+			}
+			else {
+				p2d->dib_palette[i].rgbRed   = (p2d_byte)(0.5+255.0*lcolor.sm[P2D_SM_R]);
+				p2d->dib_palette[i].rgbGreen = (p2d_byte)(0.5+255.0*lcolor.sm[P2D_SM_G]);
+				p2d->dib_palette[i].rgbBlue  = (p2d_byte)(0.5+255.0*lcolor.sm[P2D_SM_B]);
+			}
+		}
 	}
 
 	// Directly read the image into the DIB.
@@ -1124,8 +1209,10 @@ struct p2d_globals_struct *p2d_create_globals()
 void p2d_destroy_globals(struct p2d_globals_struct *g)
 {
 	if(g) {
+#if 0
 		if(g->linear_to_srgb255_table) free((void*)g->linear_to_srgb255_table);
 		if(g->identity255_table) free((void*)g->identity255_table);
+#endif
 		free((void*)g);
 	}
 }
