@@ -10,6 +10,7 @@
 #define SYM_MICROMETERS _T("\x3bcm")
 #define SYM_MIDDOT      _T("\xb7")
 #define SYM_ENDASH      _T("\x2013")
+#define SYM_HORZBAR     _T("\x2015")
 #define SYM_LSQUO       _T("\x2018")
 #define SYM_RSQUO       _T("\x2019")
 #define SYM_LDQUO       _T("\x201c")
@@ -20,6 +21,7 @@
 #define SYM_MICROMETERS "micrometers"
 #define SYM_MIDDOT      "-"
 #define SYM_ENDASH      "-"
+#define SYM_HORZBAR     "---"
 #define SYM_LSQUO       "'"
 #define SYM_RSQUO       "'"
 #define SYM_LDQUO       "\""
@@ -243,6 +245,10 @@ int convert_utf8_to_utf16(const void *src, int srclen,
 								 WCHAR **pdst, int *pdstlen);
 int convert_utf16_to_utf8(const WCHAR *src, int srclen,
 								 char **pdst, int *pdstlen);
+#endif
+
+#ifdef TWPNG_HAVE_ZLIB
+int twpng_uncompress_data(unsigned char **dataoutp, unsigned char *datain, int inlen);
 #endif
 
 #ifdef TWPNG_SUPPORT_VIEWER

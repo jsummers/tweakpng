@@ -207,7 +207,7 @@ static DWORD get_uncompressed_size(unsigned char *datain, int inlen)
 
 // returns length of compressed data
 // allocs a new buffer for the data
-static int compress_it(unsigned char **dataoutp, unsigned char*datain, int inlen)
+static int twpng_compress_data(unsigned char **dataoutp, unsigned char*datain, int inlen)
 {
 	z_stream z;
 	unsigned char *dataout;
@@ -244,7 +244,7 @@ static int compress_it(unsigned char **dataoutp, unsigned char*datain, int inlen
 	return z.total_out;
 }
 
-static int uncompress_it(unsigned char **dataoutp, unsigned char*datain, int inlen)
+int twpng_uncompress_data(unsigned char **dataoutp, unsigned char *datain, int inlen)
 {
 	int alloced=0;
 	unsigned char *dataout;
@@ -1425,7 +1425,7 @@ int Chunk::set_text_info(const TCHAR *keyword,
 	length=0;
 
 	if(is_compressed) {
-		cmpr_text_len=compress_it(&cmpr_text,(unsigned char*)text_mbcs,text_len);
+		cmpr_text_len=twpng_compress_data(&cmpr_text,(unsigned char*)text_mbcs,text_len);
 		if(cmpr_text_len<1 || !cmpr_text) { goto done; }
 	}
 
@@ -1518,7 +1518,7 @@ static int uncompress_text(struct text_info_struct *ti, unsigned char *cmpr_text
 
 	unc_text=NULL;
 	ti->text_size_in_tchars=0;
-	unc_text_size=uncompress_it(&unc_text, cmpr_text, cmpr_text_len);
+	unc_text_size=twpng_uncompress_data(&unc_text, cmpr_text, cmpr_text_len);
 	if(unc_text==NULL) return 0;
 	if(unc_text_size<1) {
 		free(unc_text);
