@@ -32,6 +32,7 @@ charset.cpp
 chunk.cpp
 COPYING.txt
 drag2.cur
+iccprof.cpp
 icon_1.ico
 icon_2.ico
 pngtodib.cpp

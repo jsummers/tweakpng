@@ -264,6 +264,11 @@ struct text_info_struct {
 	TCHAR *translated_keyword;
 };
 
+struct keyword_info_struct {
+	int keyword_len;
+	TCHAR keyword[80];
+};
+
 struct sCAL_data;
 
 class Chunk {
@@ -284,6 +289,8 @@ public:
 	int init_from_memory(unsigned char *buf, int);
 	void set_chunktype_tchar_from_ascii();
 	void free_text_info();
+	int get_keyword_info(struct keyword_info_struct *kw);
+
 
 	DWORD calc_crc();  // calculates CRC, does not modify it
 
@@ -345,6 +352,8 @@ private:
 	void set_sCAL_data(const struct sCAL_data *d);
 	void init_sCAL_dlg(HWND hwnd);
 	void process_sCAL_dlg(HWND hwnd);
+	void init_iCCP_dlg(HWND hwnd);
+	void process_iCCP_dlg(HWND hwnd);
 
 	int has_valid_length();
 	void msg_invalid_length(TCHAR *buf, int buflen, const TCHAR *name);
@@ -456,6 +465,5 @@ private:
 	void CalcStretchedSize();
 	RECT m_clientrect;
 };
-
 
 #endif

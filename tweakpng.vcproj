@@ -769,6 +769,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\iccprof.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\pngtodib.cpp"
 				>
 			</File>

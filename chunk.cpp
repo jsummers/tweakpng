@@ -599,7 +599,7 @@ int can_edit_chunk_type(int ct)
 	case CHUNK_sBIT: case CHUNK_sRGB: case CHUNK_tEXt:
 	case CHUNK_pHYs: case CHUNK_tIME: case CHUNK_sTER:
 	case CHUNK_acTL: case CHUNK_fcTL: case CHUNK_fdAT:
-	case CHUNK_oFFs: case CHUNK_sCAL:
+	case CHUNK_oFFs: case CHUNK_sCAL: case CHUNK_iCCP:
 		return 1;
 	case CHUNK_zTXt:
 		return globals.zlib_available;
@@ -779,6 +779,11 @@ plte_start:
 
 	case CHUNK_sCAL:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_SCAL"),globals.hwndMain,
+		    DlgProcEditChunk, (LPARAM)&ecctx);
+		break;
+
+	case CHUNK_iCCP:
+		changed=  DialogBoxParam(globals.hInst,_T("DLG_ICCPROFILE"),globals.hwndMain,
 		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
 	}
@@ -1842,24 +1847,48 @@ void Chunk::get_text_descr_generic(TCHAR *buf, int buflen)
 	}
 }
 
+int Chunk::get_keyword_info(struct keyword_info_struct *kw)
+{
+	int i;
+
+	i=0;
+	kw->keyword[0] = '\0';
+	kw->keyword_len = 0;
+
+	while(1) {
+		if(i>=(int)length) {
+			// No NUL separator exists
+			kw->keyword[0] = '\0';
+			kw->keyword_len = 0;
+			return 0;
+		}
+
+		if(data[i]==0) break; // NUL separator found
+
+		// keyword_len is the actual length in the chunk, not necessarily
+		// the length in the ->keyword buffer.
+		kw->keyword_len = i+1;
+
+		if(i<=78) {
+			kw->keyword[i] = (TCHAR)data[i];
+			kw->keyword[i+1] = '\0';
+		}
+
+		i++;
+	}
+	return 1;
+}
+
 // Several chunk types start with a null-terminated keyword. In lieu of
 // fully handling them, we'll at least display that keyword.
 void Chunk::describe_keyword_chunk(TCHAR *buf, int buflen, const TCHAR *prefix)
 {
-	int p,i;
+	struct keyword_info_struct kw;
 
-	// find null character that marks the end of the keyword
-	p= -1;
-	for(i=0;i<(int)length;i++) {
-		if(data[i]==0) { p=i; break;}
-	}
+	get_keyword_info(&kw);
 
-	if(p>=1 && p<=79) {
-#ifdef UNICODE
-		StringCchPrintf(buf,buflen,_T("%s: [%S]"),prefix,data);
-#else
-		StringCchPrintf(buf,buflen,_T("%s: [%s]"),prefix,data);
-#endif
+	if(kw.keyword_len>=1 && kw.keyword_len<=79) {
+		StringCchPrintf(buf,buflen,_T("%s: [%s]"),prefix,kw.keyword);
 	}
 	else {
 		StringCchPrintf(buf,buflen,_T("%s, invalid name length"),prefix);
@@ -2498,6 +2527,10 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		case CHUNK_sCAL:
 			ch->init_sCAL_dlg(hwnd);
 			break;
+
+		case CHUNK_iCCP:
+			ch->init_iCCP_dlg(hwnd);
+			break;
 		}
 		return 1;
 	}
@@ -2728,6 +2761,10 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
 			case CHUNK_sCAL:
 				ch->process_sCAL_dlg(hwnd);
+				break;
+
+			case CHUNK_iCCP:
+				ch->process_iCCP_dlg(hwnd);
 				break;
 			}
 			EndDialog(hwnd,1);
