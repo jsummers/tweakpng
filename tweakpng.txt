@@ -101,7 +101,7 @@ Standard chunks:
  iTXt*   yes             yes             yes
  pHYs    yes             yes             yes
  tIME    yes             yes             yes
- iCCP    name only       no              no
+ iCCP    yes             name only       no
  sPLT    name only       no              no
  sTER    yes             yes             yes
  dSIG    no              no              no

@@ -72,7 +72,7 @@ static void twpng_iccp_bytes_to_string(struct iccp_ctx_struct *ctx,
 		if(data[i]>=32 && data[i]<=126) {
 			buf[buf_pos++] = (TCHAR)data[i];
 		}
-		else {
+		else if(data[i]!=0) {
 			// TODO: Support unprintable characters.
 			buf[buf_pos++] = '_';
 		}
@@ -142,7 +142,7 @@ static void twpng_dump_iccp_header(struct iccp_ctx_struct *ctx)
 
 	if(ctx->data_len<128) return;
 
-	twpng_iccp_append_text(ctx,SYM_HORZBAR _T(" Profile header ")
+	twpng_iccp_append_text(ctx,SYM_HORZBAR _T(" Header ")
 		SYM_HORZBAR _T("\r\n"));
 
 	u = read_int32(&ctx->data[0]);
@@ -216,6 +216,32 @@ static void twpng_dump_iccp_header(struct iccp_ctx_struct *ctx)
 
 static void twpng_dump_iccp_tags(struct iccp_ctx_struct *ctx)
 {
+	int i;
+	unsigned int ntags;
+	unsigned int t_offset, t_size;
+	unsigned char *tagdata; // pointer to ctx->data[128]
+	TCHAR buf[100];
+
+	if(ctx->data_len<132) return;
+	tagdata = &ctx->data[128];
+
+	twpng_iccp_append_text(ctx,_T("\r\n") SYM_HORZBAR _T(" Tags ")
+		SYM_HORZBAR _T("\r\n"));
+
+	ntags = read_int32(&tagdata[0]);
+	twpng_iccp_append_textf(ctx,_T("Number of tags: %u\r\n"),ntags);
+
+	if(ntags>10000) return;
+	if((unsigned int)ctx->data_len<132+12*ntags) return;
+
+	for(i=0;i<(int)ntags;i++) {
+		twpng_iccp_bytes_to_string(ctx,&tagdata[4+12*i],4,buf,100);
+		t_offset = read_int32(&tagdata[4+12*i+4]);
+		t_size   = read_int32(&tagdata[4+12*i+8]);
+		twpng_iccp_append_textf(ctx,_T("Tag #%u signature=") SYM_LDQUO
+			_T("%s") SYM_RDQUO _T(" offset=%u size=%u\r\n"),
+			i+1,buf,t_offset,t_size);
+	}
 }
 
 static void twpng_dump_iccp(struct iccp_ctx_struct *ctx)
@@ -229,9 +255,7 @@ static void twpng_dump_iccp(struct iccp_ctx_struct *ctx)
 
 	twpng_dump_iccp_header(ctx);
 
-	if(ctx->data_len>128) {
-		twpng_dump_iccp_tags(ctx);
-	}
+	twpng_dump_iccp_tags(ctx);
 
 	if(ctx->data) {
 		free(ctx->data);
