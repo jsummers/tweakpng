@@ -214,6 +214,52 @@ static void twpng_dump_iccp_header(struct iccp_ctx_struct *ctx)
 	// Bytes 100-127: Reserved
 }
 
+static void twpng_dump_iccp_textType(struct iccp_ctx_struct *ctx, unsigned char *d,
+	unsigned int t_size)
+{
+	TCHAR buf[500];
+	twpng_iccp_bytes_to_string(ctx,d,t_size,buf,500);
+	twpng_iccp_append_textf(ctx,_T(" ") SYM_LDQUO _T("%s") SYM_RDQUO _T("\r\n"),buf);
+}
+
+static void twpng_dump_iccp_textDescriptionType(struct iccp_ctx_struct *ctx,
+	unsigned char *d, unsigned int t_size)
+{
+	TCHAR buf[500];
+	unsigned int ascii_count;
+
+	ascii_count = read_int32(&d[0]);
+	if(ascii_count+4>t_size) return;
+	if(ascii_count>0) {
+		twpng_iccp_bytes_to_string(ctx,&d[4],ascii_count-1,buf,500);
+		twpng_iccp_append_textf(ctx,_T(" ") SYM_LDQUO _T("%s") SYM_RDQUO _T("\r\n"),buf);
+	}
+	// TODO?: Display the Unicode and Scriptcode versions of the string,
+	// if present.
+}
+
+static void twpng_dump_iccp_tag(struct iccp_ctx_struct *ctx, unsigned int t_offset,
+	unsigned int t_size)
+{
+	unsigned int type_code;
+
+	if(t_size  > 100000000) return;
+	if(t_size<8) return;
+	if(t_offset>1000000000) return;
+	if(t_offset+t_size>(unsigned int)ctx->data_len) return;
+
+	type_code = read_int32(&ctx->data[t_offset]);
+
+	switch(type_code) {
+	case 0x74657874: // 'text'
+		twpng_dump_iccp_textType(ctx,&ctx->data[t_offset+8],t_size-8);
+		break;
+	case 0x64657363: // 'desc'
+		twpng_dump_iccp_textDescriptionType(ctx,&ctx->data[t_offset+8],t_size-8);
+		break;
+	}
+}
+
 static void twpng_dump_iccp_tags(struct iccp_ctx_struct *ctx)
 {
 	int i;
@@ -221,6 +267,7 @@ static void twpng_dump_iccp_tags(struct iccp_ctx_struct *ctx)
 	unsigned int t_offset, t_size;
 	unsigned char *tagdata; // pointer to ctx->data[128]
 	TCHAR buf[100];
+	TCHAR buf2[100];
 
 	if(ctx->data_len<132) return;
 	tagdata = &ctx->data[128];
@@ -238,9 +285,19 @@ static void twpng_dump_iccp_tags(struct iccp_ctx_struct *ctx)
 		twpng_iccp_bytes_to_string(ctx,&tagdata[4+12*i],4,buf,100);
 		t_offset = read_int32(&tagdata[4+12*i+4]);
 		t_size   = read_int32(&tagdata[4+12*i+8]);
+
+		if(t_offset+4<=(unsigned int)ctx->data_len) {
+			twpng_iccp_bytes_to_string(ctx,&ctx->data[t_offset],4,buf2,100);
+		}
+		else {
+			buf2[0] = '\0';
+		}
+
 		twpng_iccp_append_textf(ctx,_T("Tag #%u signature=") SYM_LDQUO
-			_T("%s") SYM_RDQUO _T(" offset=%u size=%u\r\n"),
-			i+1,buf,t_offset,t_size);
+			_T("%s") SYM_RDQUO _T(" offset=%u size=%u type=") SYM_LDQUO
+			_T("%s") SYM_RDQUO _T("\r\n"),
+			i+1,buf,t_offset,t_size,buf2);
+		twpng_dump_iccp_tag(ctx,t_offset,t_size);
 	}
 }
 

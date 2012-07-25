@@ -174,7 +174,8 @@ int Chunk::is_safe_to_copy()  { return (m_chunktype_ascii[3]&0x20)?1:0; }
 
 #ifdef TWPNG_HAVE_ZLIB
 
-static DWORD get_uncompressed_size(unsigned char *datain, int inlen)
+static DWORD get_uncompressed_size(unsigned char *datain, int inlen,
+	int *perrflag, TCHAR *errmsg, int errmsglen)
 {
 	unsigned char dbuf[16384];
 	int data_read=0;
@@ -182,6 +183,7 @@ static DWORD get_uncompressed_size(unsigned char *datain, int inlen)
 
 	z_stream z;
 
+	*perrflag = 0;
 	ZeroMemory((void*)&z,sizeof(z_stream));
 
 	z.opaque=0;
@@ -196,6 +198,14 @@ static DWORD get_uncompressed_size(unsigned char *datain, int inlen)
 		err = inflate(&z, Z_NO_FLUSH);
 		if(err == Z_STREAM_END) break;
 		if(err != Z_OK) {
+			*perrflag = 1;
+			if(errmsg) {
+#ifdef UNICODE
+				StringCchPrintf(errmsg,errmsglen,_T("%S"),z.msg);
+#else
+				StringCchPrintf(errmsg,errmsglen,"%s",z.msg);
+#endif
+			}
 			inflateEnd(&z);
 			return 0;
 		}
@@ -252,13 +262,15 @@ int twpng_uncompress_data(unsigned char **dataoutp, unsigned char *datain, int i
 	int data_written;
 	int ret;
 	DWORD unc_size;
+	int errflag;
+	TCHAR errmsg[200];
 
 	// We uncompress it once just to figure out how big a buffer we
 	// need to allocate. It's wasteful, but no big deal
 	// in this program, I think.
-	unc_size=get_uncompressed_size(datain,inlen);
-	if(!unc_size) {
-		mesg(MSG_E,_T("inflate error"));
+	unc_size=get_uncompressed_size(datain,inlen,&errflag,errmsg,200);
+	if(errflag) {
+		mesg(MSG_E,_T("inflate error: %s"),errmsg);
 		return 0;
 	}
 	assert((*dataoutp)==NULL);
