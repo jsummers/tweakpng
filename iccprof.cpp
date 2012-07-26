@@ -135,6 +135,22 @@ static TCHAR *get_rendering_intent_descr(unsigned int u, TCHAR *buf, int buf_len
 	return buf;
 }
 
+static double read_s15Fixed16Number(unsigned char *d)
+{
+	return ((double)(int)(unsigned int)read_int32(d))/65536.0;
+}
+
+static void twpng_dump_iccp_XYZData(struct iccp_ctx_struct *ctx,
+	unsigned char *d, unsigned int t_size, const TCHAR *prefix)
+{
+	double x,y,z;
+	if(t_size!=12) return;
+	x = read_s15Fixed16Number(&d[0]);
+	y = read_s15Fixed16Number(&d[4]);
+	z = read_s15Fixed16Number(&d[8]);
+	twpng_iccp_append_textf(ctx,_T("%sX=%.5f, Y=%.5f, Z=%.5f\r\n"),prefix,x,y,z);
+}
+
 static void twpng_dump_iccp_header(struct iccp_ctx_struct *ctx)
 {
 	DWORD u;
@@ -201,7 +217,8 @@ static void twpng_dump_iccp_header(struct iccp_ctx_struct *ctx)
 	twpng_iccp_append_textf(ctx,_T("Rendering intent: %u (%s)\r\n"),u,
 		get_rendering_intent_descr(u,buf,100));
 
-	// TODO: Bytes 68-79: illuminant
+	// Bytes 68-79: illuminant
+	twpng_dump_iccp_XYZData(ctx,&ctx->data[68],12,_T("Illuminant: "));
 
 	twpng_iccp_bytes_to_string(ctx,&ctx->data[80],4,buf,100);
 	twpng_iccp_append_textf(ctx,_T("Profile creator: ") SYM_LDQUO
@@ -219,7 +236,7 @@ static void twpng_dump_iccp_textType(struct iccp_ctx_struct *ctx, unsigned char 
 {
 	TCHAR buf[500];
 	twpng_iccp_bytes_to_string(ctx,d,t_size,buf,500);
-	twpng_iccp_append_textf(ctx,_T(" ") SYM_LDQUO _T("%s") SYM_RDQUO _T("\r\n"),buf);
+	twpng_iccp_append_textf(ctx,_T("\t") SYM_LDQUO _T("%s") SYM_RDQUO _T("\r\n"),buf);
 }
 
 static void twpng_dump_iccp_textDescriptionType(struct iccp_ctx_struct *ctx,
@@ -232,16 +249,92 @@ static void twpng_dump_iccp_textDescriptionType(struct iccp_ctx_struct *ctx,
 	if(ascii_count+4>t_size) return;
 	if(ascii_count>0) {
 		twpng_iccp_bytes_to_string(ctx,&d[4],ascii_count-1,buf,500);
-		twpng_iccp_append_textf(ctx,_T(" ") SYM_LDQUO _T("%s") SYM_RDQUO _T("\r\n"),buf);
+		twpng_iccp_append_textf(ctx,_T("\t") SYM_LDQUO _T("%s") SYM_RDQUO _T("\r\n"),buf);
 	}
 	// TODO?: Display the Unicode and Scriptcode versions of the string,
 	// if present.
+}
+
+static void twpng_dump_iccp_std_observer(struct iccp_ctx_struct *ctx,
+	unsigned char *d)
+{
+	unsigned int u;
+	const TCHAR *itypes[3] = { _T("unknown"), _T("1931 2 degree observer"),
+		_T("1964 10 degree observer") };
+	u = read_int32(d);
+	twpng_iccp_append_textf(ctx,_T("\tstandard observer: %u (%s)\r\n"),u,
+		u<=2 ? itypes[u] : _T("unrecognized"));
+}
+
+static void twpng_dump_iccp_meas_geometry(struct iccp_ctx_struct *ctx,
+	unsigned char *d)
+{
+	unsigned int u;
+	const TCHAR *itypes[3] = { _T("unknown"), _T("0/45 or 45/0"),
+		_T("0/d or d/0") };
+	u = read_int32(d);
+	twpng_iccp_append_textf(ctx,_T("\tmeasurement geometry: %u (%s)\r\n"),u,
+		u<=2 ? itypes[u] : _T("unrecognized"));
+}
+
+static void twpng_dump_iccp_meas_flare(struct iccp_ctx_struct *ctx,
+	unsigned char *d)
+{
+	unsigned int u;
+	const TCHAR *s;
+	u = read_int32(d);
+	if(u==0) s=_T("0 (0%)");
+	else if(u=0x10000) s=_T("1.0 (or 100%)");
+	else s=_T("unrecognized");
+	twpng_iccp_append_textf(ctx,_T("\tmeasurement flare: %u (%s)\r\n"),u,s);
+}
+
+static void twpng_dump_iccp_illuminant_type(struct iccp_ctx_struct *ctx,
+	unsigned char *d)
+{
+	unsigned int u;
+	const TCHAR *itypes[9] = { _T("unknown"), _T("D50"), _T("D65"), _T("D93"),
+		_T("F2"), _T("D55"), _T("A"), _T("Equi-Power (E)"), _T("F8") };
+	u = read_int32(d);
+	twpng_iccp_append_textf(ctx,_T("\tilluminant type: %u (%s)\r\n"),u,
+		u<=8 ? itypes[u] : _T("unrecognized"));
+}
+
+static void twpng_dump_iccp_viewingConditions(struct iccp_ctx_struct *ctx,
+	unsigned char *d, unsigned int t_size)
+{
+	if(t_size!=28) return;
+	twpng_dump_iccp_XYZData(ctx,&d[0],12,_T("\tilluminant: "));
+	twpng_dump_iccp_XYZData(ctx,&d[12],12,_T("\tsurround: "));
+	twpng_dump_iccp_illuminant_type(ctx,&d[24]);
+}
+
+static void twpng_dump_iccp_measurementType(struct iccp_ctx_struct *ctx,
+	unsigned char *d, unsigned int t_size)
+{
+	if(t_size!=28) return;
+	twpng_dump_iccp_std_observer(ctx,&d[0]);
+	twpng_dump_iccp_XYZData(ctx,&d[4],12,_T("\tmeasurement backing: "));
+	twpng_dump_iccp_meas_geometry(ctx,&d[16]);
+	twpng_dump_iccp_meas_flare(ctx,&d[20]);
+	twpng_dump_iccp_illuminant_type(ctx,&d[24]);
+}
+
+static void twpng_dump_iccp_signatureType(struct iccp_ctx_struct *ctx,
+	unsigned char *d, unsigned int t_size)
+{
+	TCHAR buf[20];
+	if(t_size!=4) return;
+	twpng_iccp_bytes_to_hex(ctx,d,4,buf,20);
+	twpng_iccp_append_textf(ctx,_T("\t%s\r\n"),buf);
 }
 
 static void twpng_dump_iccp_tag(struct iccp_ctx_struct *ctx, unsigned int t_offset,
 	unsigned int t_size)
 {
 	unsigned int type_code;
+	unsigned char *dataptr;
+	unsigned int datasize;
 
 	if(t_size  > 100000000) return;
 	if(t_size<8) return;
@@ -250,12 +343,27 @@ static void twpng_dump_iccp_tag(struct iccp_ctx_struct *ctx, unsigned int t_offs
 
 	type_code = read_int32(&ctx->data[t_offset]);
 
+	dataptr = &ctx->data[t_offset+8];
+	datasize = t_size-8;
+
 	switch(type_code) {
 	case 0x74657874: // 'text'
-		twpng_dump_iccp_textType(ctx,&ctx->data[t_offset+8],t_size-8);
+		twpng_dump_iccp_textType(ctx,dataptr,datasize);
 		break;
 	case 0x64657363: // 'desc'
-		twpng_dump_iccp_textDescriptionType(ctx,&ctx->data[t_offset+8],t_size-8);
+		twpng_dump_iccp_textDescriptionType(ctx,dataptr,datasize);
+		break;
+	case 0x58595a20: // 'XYZ '
+		twpng_dump_iccp_XYZData(ctx,dataptr,datasize,_T("\t"));
+		break;
+	case 0x76696577: // 'view'
+		twpng_dump_iccp_viewingConditions(ctx,dataptr,datasize);
+		break;
+	case 0x6d656173: // 'meas'
+		twpng_dump_iccp_measurementType(ctx,dataptr,datasize);
+		break;
+	case 0x73696720: // 'sig '
+		twpng_dump_iccp_signatureType(ctx,dataptr,datasize);
 		break;
 	}
 }
