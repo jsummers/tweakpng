@@ -131,6 +131,7 @@ static const chunk_id_struct_t chunk_id_list[] = {
 	{CHUNK_acTL,"acTL"},
 	{CHUNK_fcTL,"fcTL"},
 	{CHUNK_fdAT,"fdAT"},
+	{CHUNK_CgBI,"CgBI"},
 
 	{CHUNK_MHDR,"MHDR"},
 	{CHUNK_MEND,"MEND"},
@@ -1834,6 +1835,7 @@ void Chunk::get_text_descr(TCHAR *buf, int buflen)
 	case CHUNK_acTL: describe_acTL(buf,buflen); break;
 	case CHUNK_fcTL: describe_fcTL(buf,buflen); break;
 	case CHUNK_fdAT: describe_fdAT(buf,buflen); break;
+	case CHUNK_CgBI: StringCchCopy(buf,buflen,_T("iPhone PNG-like file header")); break;
 
 	default:
 		if(!is_public()) {

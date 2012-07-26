@@ -110,6 +110,9 @@
 #define CHUNK_fcTL 301
 #define CHUNK_fdAT 302
 
+// Other known private chunks
+#define CHUNK_CgBI 310
+
 // registered PNG extensions:
 #define CHUNK_oFFs  501
 #define CHUNK_pCAL  502
