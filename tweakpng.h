@@ -229,6 +229,7 @@ void mesg(int severity, const TCHAR *fmt, ...);
 int choose_color_dialog(HWND hwnd, unsigned char *redp,
 						unsigned char *greenp, unsigned char *bluep);
 void DroppedFiles(HDROP hDrop);
+void GetPosInParent(HWND hwnd,RECT *rc);
 void update_status_bar_and_viewer();
 int can_edit_chunk_type(int ct);
 
@@ -259,6 +260,7 @@ void twpng_get_libpng_version(TCHAR *buf, int buflen);
 #endif
 
 class Png;
+class Chunk;
 
 struct text_info_struct {
 	int processed;
@@ -279,6 +281,19 @@ struct keyword_info_struct {
 };
 
 struct sCAL_data;
+
+struct textdlgmetrics {
+	int border_buttonoffset;
+	int border_editx;
+	int border_edity;
+	int border_btn1y;
+	int border_btn2y;
+};
+
+struct edit_chunk_ctx {
+	Chunk *ch;
+	struct textdlgmetrics tdm;
+};
 
 class Chunk {
 public:
@@ -361,8 +376,9 @@ private:
 	void set_sCAL_data(const struct sCAL_data *d);
 	void init_sCAL_dlg(HWND hwnd);
 	void process_sCAL_dlg(HWND hwnd);
-	void init_iCCP_dlg(HWND hwnd);
-	void process_iCCP_dlg(HWND hwnd);
+	void init_iCCP_dlg(struct edit_chunk_ctx *ecctx, HWND hwnd);
+	void size_iCCP_dlg(struct edit_chunk_ctx *ecctx, HWND hwnd);
+	void process_iCCP_dlg(struct edit_chunk_ctx *ecctx, HWND hwnd);
 
 	int has_valid_length();
 	void msg_invalid_length(TCHAR *buf, int buflen, const TCHAR *name);

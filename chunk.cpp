@@ -627,19 +627,6 @@ int Chunk::can_edit()
 	return can_edit_chunk_type(m_chunktype_id);
 }
 
-struct textdlgmetrics {
-	int border_buttonoffset;
-	int border_editx;
-	int border_edity;
-	int border_btn1y;
-	int border_btn2y;
-};
-
-struct edit_chunk_ctx {
-	Chunk *ch;
-	struct textdlgmetrics tdm;
-};
-
 // return 1 if changed, 2 if changed multiple chunks
 int Chunk::edit()
 {
@@ -2043,7 +2030,7 @@ void Chunk::after_init()
 
 
 // a useful function that Microsoft seems to have left out of the API
-static void GetPosInParent(HWND hwnd,RECT *rc)
+void GetPosInParent(HWND hwnd,RECT *rc)
 {
 	POINT p;
 
@@ -2543,7 +2530,7 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 			break;
 
 		case CHUNK_iCCP:
-			ch->init_iCCP_dlg(hwnd);
+			ch->init_iCCP_dlg(p,hwnd);
 			break;
 		}
 		return 1;
@@ -2562,6 +2549,23 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		ch=NULL;
 		break;
 		
+	case WM_SIZE:
+		if(ch->m_chunktype_id==CHUNK_iCCP) {
+			ch->size_iCCP_dlg(p,hwnd);
+			return 1;
+		}
+		return 0;
+
+	case WM_GETMINMAXINFO:
+		if(ch->m_chunktype_id==CHUNK_iCCP) {
+			LPMINMAXINFO mm;
+			mm=(LPMINMAXINFO)lParam;
+			mm->ptMinTrackSize.x=440;
+			mm->ptMinTrackSize.y=190;
+			return 1;
+		}
+		return 0;
+
 	case WM_COMMAND:
 		if(!ch) return 1;
 
@@ -2778,7 +2782,7 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 				break;
 
 			case CHUNK_iCCP:
-				ch->process_iCCP_dlg(hwnd);
+				ch->process_iCCP_dlg(p,hwnd);
 				break;
 			}
 			EndDialog(hwnd,1);

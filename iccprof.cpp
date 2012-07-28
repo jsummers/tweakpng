@@ -429,10 +429,11 @@ static void twpng_dump_iccp(struct iccp_ctx_struct *ctx)
 #endif
 }
 
-void Chunk::init_iCCP_dlg(HWND hwnd)
+void Chunk::init_iCCP_dlg(struct edit_chunk_ctx *ecctx, HWND hwnd)
 {
 	struct keyword_info_struct kw;
 	struct iccp_ctx_struct ctx;
+	RECT rd,r1;
 
 	ZeroMemory(&ctx,sizeof(struct iccp_ctx_struct));
 	get_keyword_info(&kw);
@@ -458,9 +459,39 @@ void Chunk::init_iCCP_dlg(HWND hwnd)
 	twpng_iccp_append_text(&ctx,_T("Zlib support required\r\n"));
 #endif
 
+	GetClientRect(hwnd,&rd);
+	GetPosInParent(GetDlgItem(hwnd,IDOK),&r1);
+
+	ecctx->tdm.border_buttonoffset = (rd.right-rd.left)-r1.left;
+	ecctx->tdm.border_btn1y = r1.top;
+
+	GetPosInParent(GetDlgItem(hwnd,IDCANCEL),&r1);
+	ecctx->tdm.border_btn2y = r1.top;
+
+	GetPosInParent(GetDlgItem(hwnd,IDC_EDIT2),&r1);
+	ecctx->tdm.border_editx = (rd.right-rd.left)-r1.right;
+	ecctx->tdm.border_edity = (rd.bottom-rd.top)-r1.bottom;
 }
 
-void Chunk::process_iCCP_dlg(HWND hwnd)
+void Chunk::size_iCCP_dlg(struct edit_chunk_ctx *ecctx, HWND hwnd)
+{
+	RECT rd,r1;
+	HWND h;
+
+	GetClientRect(hwnd,&rd);
+
+	SetWindowPos(GetDlgItem(hwnd,IDOK),NULL,rd.right-ecctx->tdm.border_buttonoffset,ecctx->tdm.border_btn1y,0,0,SWP_NOSIZE|SWP_NOZORDER);
+	SetWindowPos(GetDlgItem(hwnd,IDCANCEL),NULL,rd.right-ecctx->tdm.border_buttonoffset,ecctx->tdm.border_btn2y,0,0,SWP_NOSIZE|SWP_NOZORDER);
+
+	h=GetDlgItem(hwnd,IDC_EDIT2);
+	GetPosInParent(h,&r1);
+	SetWindowPos(h,NULL,0,0,
+		(rd.right-rd.left)-r1.left-ecctx->tdm.border_editx,
+		(rd.bottom-rd.top)-r1.top-ecctx->tdm.border_edity,
+		SWP_NOMOVE|SWP_NOZORDER);
+}
+
+void Chunk::process_iCCP_dlg(struct edit_chunk_ctx *ecctx, HWND hwnd)
 {
 	struct keyword_info_struct kw;
 	DWORD length_excluding_name;
