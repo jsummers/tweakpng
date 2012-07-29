@@ -188,7 +188,7 @@ static void twpng_dump_iccp_header(struct iccp_ctx_struct *ctx)
 
 	// Bytes 24-35: date/time
 	twpng_iccp_bytes_to_datetime(ctx,&ctx->data[24],buf,100);
-	twpng_iccp_append_textf(ctx,_T("Date and time: %s\r\n"),buf);
+	twpng_iccp_append_textf(ctx,_T("Profile creation time: %s UTC\r\n"),buf);
 
 	twpng_iccp_bytes_to_string(ctx,&ctx->data[36],4,buf,100);
 	twpng_iccp_append_textf(ctx,_T("Profile file signature: ") SYM_LDQUO
@@ -210,7 +210,12 @@ static void twpng_dump_iccp_header(struct iccp_ctx_struct *ctx)
 	twpng_iccp_append_textf(ctx,_T("Device model: ") SYM_LDQUO
 		_T("%s") SYM_RDQUO _T("\r\n"),buf);
 
-	// TODO: Bytes 56-63: Device attributes
+	u = read_int32(&ctx->data[60]);
+	twpng_iccp_append_textf(ctx,_T("Attributes: %s, %s, %s, %s\r\n"),
+		(u&0x01)?_T("Transparency"):_T("Reflective"),
+		(u&0x02)?_T("Matte"):_T("Glossy"),
+		(u&0x04)?_T("Negative"):_T("Positive"),
+		(u&0x08)?_T("B&W"):_T("Color"));
 
 	u = read_int32(&ctx->data[64]);
 	u = u & 0xffff;
