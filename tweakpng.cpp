@@ -249,6 +249,17 @@ DWORD Png::get_file_size()
 	return s;
 }
 
+static void update_viewer_filename()
+{
+#ifdef TWPNG_SUPPORT_VIEWER
+	if(!g_viewer) return;
+	if(png && png->m_named)
+		g_viewer->SetCurrentFileName(png->m_filename);
+	else
+		g_viewer->SetCurrentFileName(NULL);
+#endif
+}
+
 static void update_status_bar_and_viewer()
 {
 	TCHAR buf[100];
@@ -1266,6 +1277,7 @@ static void ClosePngDocument()
 		ListView_DeleteAllItems(globals.hwndMainList);
 	}
 	SetTitle(NULL);
+	update_viewer_filename();
 	update_status_bar_and_viewer();
 }
 
@@ -1281,6 +1293,7 @@ static void NewPng()
 	}
 	png=new Png();
 	SetTitle(png);
+	update_viewer_filename();
 	update_status_bar_and_viewer();
 }
 
@@ -1298,12 +1311,14 @@ static int OpenPngByName(const TCHAR *fn)
 		delete png;
 		png=NULL;
 		SetTitle(NULL);
+		update_viewer_filename();
 		update_status_bar_and_viewer();
 		return 0;
 	}
 
 	png->fill_listbox(globals.hwndMainList);
 	SetTitle(png);
+	update_viewer_filename();
 	update_status_bar_and_viewer();
 
 	return 1;
@@ -2814,7 +2829,10 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 				globals.autoopen_viewer=0;
 			}
 			else {
-				g_viewer = new Viewer(globals.hwndMain);
+				const TCHAR *fn;
+				if(png && png->m_named) fn=png->m_filename;
+				else fn=NULL;
+				g_viewer = new Viewer(globals.hwndMain,fn);
 				update_viewer();
 				globals.autoopen_viewer=1;
 			}

@@ -67,7 +67,7 @@ void Viewer::GlobalDestroy()
 }
 
 // the constructor creates the window
-Viewer::Viewer(HWND parent)
+Viewer::Viewer(HWND parent, const TCHAR *current_filename)
 {
 	DWORD styles;
 
@@ -88,7 +88,8 @@ Viewer::Viewer(HWND parent)
 	if(!m_hwndViewer) return;
 
 	twpng_SetWindowPos(m_hwndViewer,&globals.window_prefs.viewer);
-	SetViewerWindowTitle();
+	SetCurrentFileName(current_filename);
+	UpdateViewerWindowTitle();
 	ShowWindow(m_hwndViewer,globals.window_prefs.viewer.max?SW_SHOWMAXIMIZED:SW_SHOWNOACTIVATE);
 	GetClientRect(m_hwndViewer,&m_clientrect);
 
@@ -110,15 +111,46 @@ Viewer::~Viewer()
 	globals.viewer_imgpos_y = m_imgpos_y;
 }
 
-void Viewer::SetViewerWindowTitle()
+// 'fn' should be NULL if there is no current file.
+void Viewer::SetCurrentFileName(const TCHAR *fn)
 {
-	if(!m_hwndViewer) return;
-	if(globals.use_gamma) {
-		::SetWindowText(m_hwndViewer,_T("TweakPNG Image Viewer"));
+	if(fn) {
+		const TCHAR *s;
+
+		// Find the base filename
+		s = _tcsrchr(fn,'\\');
+		if(s) { // Path contains a backslash
+			StringCbCopy(m_filename_base,sizeof(m_filename_base),s+1);
+		}
+		else {
+			StringCbCopy(m_filename_base,sizeof(m_filename_base),fn);
+		}
 	}
 	else {
-		::SetWindowText(m_hwndViewer,_T("TweakPNG Image Viewer [gamma off]"));
+		m_filename_base[0] = '\0';
 	}
+	UpdateViewerWindowTitle();
+}
+
+// 'png' can be NULL if there is no current file.
+void Viewer::UpdateViewerWindowTitle()
+{
+	TCHAR title[500];
+
+	if(!m_hwndViewer) return;
+	title[0]='\0';
+
+	if(m_filename_base[0]) {
+		StringCbPrintf(title,sizeof(title),_T("%s - "),m_filename_base);
+	}
+
+	StringCbCat(title,sizeof(title),_T("TweakPNG Image Viewer"));
+
+	if(!globals.use_gamma) {
+		StringCbCat(title,sizeof(title),_T(" [gamma off]"));
+	}
+
+	::SetWindowText(m_hwndViewer,title);
 }
 
 // sets m_strechedwidth based on m_adjwidth and globals.vsize, etc.
@@ -507,7 +539,7 @@ LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 			return 0;
 		case ID_GAMMACORRECT:
 			globals.use_gamma = !globals.use_gamma;
-			v->SetViewerWindowTitle();
+			v->UpdateViewerWindowTitle();
 			update_viewer();
 			return 0;
 		case ID_BG_CUSTOM:

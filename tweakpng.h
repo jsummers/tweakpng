@@ -459,17 +459,18 @@ private:
 
 class Viewer {
 public:
-	Viewer(HWND parent);
+	Viewer(HWND parent, const TCHAR *current_filename);
 	~Viewer();
 
 	static void GlobalInit();
 	static void GlobalDestroy();
 	void Close();
 	void Update(Png *png); // Set png==NULL to clear viewer.
+	void SetCurrentFileName(const TCHAR *fn);
+	void UpdateViewerWindowTitle();
 	HWND m_hwndViewer;
 
 private:
-	void SetViewerWindowTitle();
 	LPBITMAPINFOHEADER m_dib;
 	void *m_bits;
 
@@ -478,6 +479,7 @@ private:
 
 	int m_errorflag; // 0 = no error
 	TCHAR m_errormsg[200];
+	TCHAR m_filename_base[200];
 
 	static LRESULT CALLBACK WndProcViewer(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	void FreeImage();
