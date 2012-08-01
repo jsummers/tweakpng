@@ -232,6 +232,7 @@ void DroppedFiles(HDROP hDrop);
 void GetPosInParent(HWND hwnd,RECT *rc);
 void update_status_bar_and_viewer();
 int can_edit_chunk_type(int ct);
+void twpng_SetLVSelection(HWND hwnd, int pos1, int num);
 
 LRESULT CALLBACK WndProcEditPal(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -253,6 +254,7 @@ int convert_utf16_to_utf8(const WCHAR *src, int srclen,
 
 #ifdef TWPNG_HAVE_ZLIB
 int twpng_uncompress_data(unsigned char **dataoutp, unsigned char *datain, int inlen);
+int twpng_compress_data(unsigned char **dataoutp, unsigned char*datain, int inlen);
 #endif
 
 #ifdef TWPNG_SUPPORT_VIEWER
@@ -294,6 +296,8 @@ struct edit_chunk_ctx {
 	Chunk *ch;
 	struct textdlgmetrics tdm;
 };
+
+int ImportICCProfile(Png *png);
 
 class Chunk {
 public:

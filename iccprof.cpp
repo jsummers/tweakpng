@@ -43,6 +43,100 @@ struct iccp_ctx_struct {
 	HWND hwnd;
 };
 
+
+int ImportICCProfile(Png *png)
+{
+#ifdef TWPNG_HAVE_ZLIB
+	OPENFILENAME ofn;
+	TCHAR fn[MAX_PATH];
+	HANDLE fh;
+	Chunk *c = NULL;
+	BOOL bRet;
+	int retval = 0;
+	DWORD unc_prof_len, cmpr_prof_len;
+	unsigned char *unc_prof_data = NULL;
+	unsigned char *cmpr_prof_data = NULL;
+	int pos;
+	DWORD bytesread = 0;
+	const char *prof_name = "ICC profile";
+	int prof_name_len = 11;
+
+	if(!png) goto done;
+
+	StringCchCopy(fn,MAX_PATH,_T(""));
+	ZeroMemory(&ofn,sizeof(OPENFILENAME));
+
+	ofn.lStructSize=sizeof(OPENFILENAME);
+	ofn.hwndOwner=globals.hwndMain;
+	ofn.hInstance=NULL;
+	ofn.lpstrFilter=_T("*.icc\0*.icc\0*.*\0*.*\0\0");
+	ofn.nFilterIndex=1;
+	ofn.lpstrTitle=_T("Import ICC profile...");
+	ofn.lpstrFile=fn;
+	ofn.nMaxFile=MAX_PATH;
+	ofn.Flags=OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_NOCHANGEDIR;
+
+	globals.dlgs_open++;
+	bRet = GetOpenFileName(&ofn);
+	globals.dlgs_open--;
+	if(!bRet) goto done;
+
+	fh=CreateFile(fn,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL,NULL);
+	if(fh==INVALID_HANDLE_VALUE) {
+		mesg(MSG_E,_T("Can") SYM_RSQUO _T("t open %s"),fn);
+		goto done;
+	}
+
+	unc_prof_len=GetFileSize(fh,NULL)-4;
+	if(unc_prof_len<128 || unc_prof_len>100000000) goto done;
+	unc_prof_data = (unsigned char*)malloc(unc_prof_len);
+	if(!unc_prof_data) goto done;
+
+	ReadFile(fh,(LPVOID)unc_prof_data,unc_prof_len,&bytesread,NULL);
+	CloseHandle(fh);
+
+	cmpr_prof_len = twpng_compress_data(&cmpr_prof_data, unc_prof_data, unc_prof_len);
+	if(cmpr_prof_len==0 || !cmpr_prof_data) goto done;
+
+	c=new Chunk;
+	memcpy(c->m_chunktype_ascii,"iCCP",5);
+	c->set_chunktype_tchar_from_ascii();
+
+	c->length = prof_name_len + 1 + 1 + cmpr_prof_len;
+	c->data=(unsigned char*)malloc(c->length);
+	if(!c->data) goto done;
+
+	memcpy(&c->data[0],prof_name,prof_name_len+1); // Profile name
+	c->data[prof_name_len+1] = 0; // Compression method
+	memcpy(&c->data[prof_name_len+1+1],cmpr_prof_data,cmpr_prof_len);
+
+	c->m_parentpng=png;
+	c->after_init();
+	c->chunkmodified();
+
+	// Make the new iCCP chunk the second chunk in the file if possible.
+	pos = (png->m_num_chunks>0) ? 1 : 0;
+	png->insert_chunks(pos,1,0);
+	png->chunk[pos]=c;
+	c = NULL;
+
+	png->fill_listbox(globals.hwndMainList);
+	png->modified();
+	twpng_SetLVSelection(globals.hwndMainList,pos,1);
+
+	retval = 1;
+done:
+	if(unc_prof_data) free(unc_prof_data);
+	if(cmpr_prof_data) free(cmpr_prof_data);
+	if(c) delete c;
+	return retval;
+#else
+	mesg(MSG_E,_T("Importing profiles not supported; requires zlib."));
+	return 0;
+#endif
+}
+
 static void twpng_iccp_append_text(struct iccp_ctx_struct *ctx, const TCHAR *s)
 {
 	SendDlgItemMessage(ctx->hwnd,IDC_EDIT2,EM_REPLACESEL,(WPARAM)FALSE,

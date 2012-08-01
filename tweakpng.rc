@@ -97,6 +97,7 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "Import Chunk...",             ID_IMPORTCHUNK
         MENUITEM "Export Chunk...",             ID_EXPORTCHUNK
+        MENUITEM "Import ICC Profile...",       ID_IMPORTICCPROF
     END
     POPUP "&Insert"
     BEGIN

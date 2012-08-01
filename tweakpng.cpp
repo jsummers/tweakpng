@@ -71,7 +71,6 @@ static INT_PTR CALLBACK DlgProcSplitIDAT(HWND hWnd, UINT msg, WPARAM wParam, LPA
 static INT_PTR CALLBACK DlgProcSetSig(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static INT_PTR CALLBACK DlgProcTools(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-static void SetLVSelection(HWND hwnd, int pos1, int num);
 static int OkToClosePNG();
 static void SetTitle(Png *p);
 
@@ -613,7 +612,7 @@ void Png::new_chunk(int newid)
 	c->chunkmodified();
 
 	fill_listbox(globals.hwndMainList);
-	SetLVSelection(globals.hwndMainList,pos,1);
+	twpng_SetLVSelection(globals.hwndMainList,pos,1);
 	modified();
 }
 
@@ -1700,12 +1699,12 @@ static void DeleteChunks()          // delete all selected items
 
 	if(firstdeleted<0) firstdeleted=0;
 	if(firstdeleted>(png->m_num_chunks-1)) firstdeleted=png->m_num_chunks-1;
-	SetLVSelection(globals.hwndMainList,firstdeleted,1);
+	twpng_SetLVSelection(globals.hwndMainList,firstdeleted,1);
 	png->modified();
 }
 
 // selects a range of items, and sets the focus to the first of that range
-static void SetLVSelection(HWND hwnd, int pos1, int num)
+void twpng_SetLVSelection(HWND hwnd, int pos1, int num)
 {
 	int i;
 
@@ -1788,7 +1787,7 @@ static void PasteChunks()
 			png->fill_listbox(globals.hwndMainList);
 
 			// reselect the new or changed chunks
-			SetLVSelection(globals.hwndMainList,inspos1,numnewchunks);
+			twpng_SetLVSelection(globals.hwndMainList,inspos1,numnewchunks);
 			png->modified();
 		}
 	}
@@ -1904,7 +1903,7 @@ static void ImportChunk()
 
 	png->fill_listbox(globals.hwndMainList);
 	png->modified();
-	SetLVSelection(globals.hwndMainList,pos,1);
+	twpng_SetLVSelection(globals.hwndMainList,pos,1);
 }
 
 static void ExportChunk()
@@ -1973,7 +1972,7 @@ static void MoveChunkUp()
 	png->fill_listbox(globals.hwndMainList);
 
 	for(i=png->m_num_chunks-1;i>=0;i--) {   // reselect moved chunks
-		if(png->chunk[i]->m_flag) SetLVSelection(globals.hwndMainList,i,1);
+		if(png->chunk[i]->m_flag) twpng_SetLVSelection(globals.hwndMainList,i,1);
 	}
 
 	png->modified();
@@ -2003,7 +2002,7 @@ static void MoveChunkDown()
 	png->fill_listbox(globals.hwndMainList);
 
 	for(i=0;i<png->m_num_chunks;i++) {   // reselect moved chunks
-		if(png->chunk[i]->m_flag) SetLVSelection(globals.hwndMainList,i,1);
+		if(png->chunk[i]->m_flag) twpng_SetLVSelection(globals.hwndMainList,i,1);
 	}
 
 	png->modified();
@@ -2077,7 +2076,7 @@ int Png::split_idat(int n, int ssize, int repeat)
 	fill_listbox(globals.hwndMainList);
 
 	// reselect the new or changed chunks
-	SetLVSelection(globals.hwndMainList,n,new_chunks);
+	twpng_SetLVSelection(globals.hwndMainList,n,new_chunks);
 
 	return 1;
 }
@@ -2167,7 +2166,7 @@ static void CombineIDAT(int mode)
 	if(last<=first) {    // only one chunk?
 		if(mode==1) {
 			LVUnselectAll(globals.hwndMainList);
-			SetLVSelection(globals.hwndMainList,first,1);
+			twpng_SetLVSelection(globals.hwndMainList,first,1);
 		}
 		else {
 			mesg(MSG_E,_T("Must select more than one IDAT chunk"));
@@ -2220,7 +2219,7 @@ static void CombineIDAT(int mode)
 	png->m_num_chunks -= (last-first);
 	
 	png->fill_listbox(globals.hwndMainList);
-	SetLVSelection(globals.hwndMainList,first,1);
+	twpng_SetLVSelection(globals.hwndMainList,first,1);
 
 	png->modified();
 }
@@ -2734,7 +2733,7 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 				ID_NEWPLTE,ID_NEWSTER,ID_NEWACTL,ID_NEWFCTL,ID_NEWOFFS,
 				ID_NEWSCAL,
 				ID_COMBINEALLIDAT,
-				ID_IMPORTCHUNK,ID_SIGNATURE,ID_CHECKPNG,
+				ID_IMPORTCHUNK,ID_IMPORTICCPROF,ID_SIGNATURE,ID_CHECKPNG,
 				ID_TOOL_1,ID_TOOL_2,ID_TOOL_3,ID_TOOL_4,ID_TOOL_5,ID_TOOL_6,
 				0};
 			// commands requiring exactly 1 selected chunk
@@ -2945,7 +2944,7 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 		case ID_COPY:   CopyChunks();    return 0;
 		case ID_PASTE:  PasteChunks();   return 0;
 		case ID_SELECTALL:
-			SetLVSelection(globals.hwndMainList,0,png->m_num_chunks);
+			twpng_SetLVSelection(globals.hwndMainList,0,png->m_num_chunks);
 			return 0;
 
 		case ID_SPLITIDAT:    SplitIDAT();       return 0;
@@ -2954,6 +2953,7 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
 		case ID_IMPORTCHUNK:  ImportChunk();     return 0;
 		case ID_EXPORTCHUNK:  ExportChunk();     return 0;
+		case ID_IMPORTICCPROF: ImportICCProfile(png); return 0;
 
 		case ID_TOOL_1: RunTool(0); return 0;
 		case ID_TOOL_2: RunTool(1); return 0;

@@ -218,7 +218,7 @@ static DWORD get_uncompressed_size(unsigned char *datain, int inlen,
 
 // returns length of compressed data
 // allocs a new buffer for the data
-static int twpng_compress_data(unsigned char **dataoutp, unsigned char*datain, int inlen)
+int twpng_compress_data(unsigned char **dataoutp, unsigned char*datain, int inlen)
 {
 	z_stream z;
 	unsigned char *dataout;
@@ -1425,7 +1425,11 @@ int Chunk::set_text_info(const TCHAR *keyword,
 	length=0;
 
 	if(is_compressed) {
+#ifdef HAVE_ZLIB
 		cmpr_text_len=twpng_compress_data(&cmpr_text,(unsigned char*)text_mbcs,text_len);
+#else
+		cmpr_text_len=0;
+#endif
 		if(cmpr_text_len<1 || !cmpr_text) { goto done; }
 	}
 

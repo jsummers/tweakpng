@@ -231,6 +231,9 @@ a separate file editor to create the chunk.
 Export will create a file in the format described above, from an existing 
 chunk in a PNG file. It works only on one chunk at a time.
 
+"Import ICC Profile" creates an iCCP chunk from a standard ICC color profile
+(.icc) file.
+
 
 Editing Palettes
 ----------------
