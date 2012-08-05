@@ -44,14 +44,11 @@ struct iccp_ctx_struct {
 };
 
 
-int ImportICCProfile(Png *png)
+int ImportICCProfileByFilename(Png *png, const TCHAR *fn)
 {
 #ifdef TWPNG_HAVE_ZLIB
-	OPENFILENAME ofn;
-	TCHAR fn[MAX_PATH];
 	HANDLE fh;
 	Chunk *c = NULL;
-	BOOL bRet;
 	int retval = 0;
 	DWORD unc_prof_len, cmpr_prof_len;
 	unsigned char *unc_prof_data = NULL;
@@ -62,24 +59,6 @@ int ImportICCProfile(Png *png)
 	int prof_name_len = 11;
 
 	if(!png) goto done;
-
-	StringCchCopy(fn,MAX_PATH,_T(""));
-	ZeroMemory(&ofn,sizeof(OPENFILENAME));
-
-	ofn.lStructSize=sizeof(OPENFILENAME);
-	ofn.hwndOwner=globals.hwndMain;
-	ofn.hInstance=NULL;
-	ofn.lpstrFilter=_T("*.icc\0*.icc\0*.*\0*.*\0\0");
-	ofn.nFilterIndex=1;
-	ofn.lpstrTitle=_T("Import ICC profile...");
-	ofn.lpstrFile=fn;
-	ofn.nMaxFile=MAX_PATH;
-	ofn.Flags=OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_NOCHANGEDIR;
-
-	globals.dlgs_open++;
-	bRet = GetOpenFileName(&ofn);
-	globals.dlgs_open--;
-	if(!bRet) goto done;
 
 	fh=CreateFile(fn,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL,NULL);
@@ -130,6 +109,46 @@ done:
 	if(unc_prof_data) free(unc_prof_data);
 	if(cmpr_prof_data) free(cmpr_prof_data);
 	if(c) delete c;
+	return retval;
+#else
+	mesg(MSG_E,_T("Importing profiles not supported; requires zlib."));
+	return 0;
+#endif
+}
+
+// Ask the user for a filename, and import it as an ICC profile
+int ImportICCProfile(Png *png)
+{
+#ifdef TWPNG_HAVE_ZLIB
+	TCHAR fn[MAX_PATH];
+	OPENFILENAME ofn;
+	BOOL bRet;
+	int retval = 0;
+
+	if(!png) goto done;
+
+	StringCchCopy(fn,MAX_PATH,_T(""));
+	ZeroMemory(&ofn,sizeof(OPENFILENAME));
+
+	ofn.lStructSize=sizeof(OPENFILENAME);
+	ofn.hwndOwner=globals.hwndMain;
+	ofn.hInstance=NULL;
+	ofn.lpstrFilter=_T("*.icc\0*.icc\0*.*\0*.*\0\0");
+	ofn.nFilterIndex=1;
+	ofn.lpstrTitle=_T("Import ICC profile...");
+	ofn.lpstrFile=fn;
+	ofn.nMaxFile=MAX_PATH;
+	ofn.Flags=OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_NOCHANGEDIR;
+
+	globals.dlgs_open++;
+	bRet = GetOpenFileName(&ofn);
+	globals.dlgs_open--;
+	if(!bRet) goto done;
+
+	if(!ImportICCProfileByFilename(png,fn)) goto done;
+
+	retval = 1;
+done:
 	return retval;
 #else
 	mesg(MSG_E,_T("Importing profiles not supported; requires zlib."));

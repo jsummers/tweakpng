@@ -73,6 +73,8 @@ static INT_PTR CALLBACK DlgProcTools(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
 
 static int OkToClosePNG();
 static void SetTitle(Png *p);
+static void ImportChunkByFilename(const TCHAR *fn, int pos);
+static int GetLVFocus(HWND hwnd);
 
 /* make the table for a fast crc */
 void make_crc_table()
@@ -1380,21 +1382,43 @@ static void ReopenPngDocument()
 
 void DroppedFiles(HDROP hDrop)
 {
+	UINT num_files;
 	UINT rv;
+	DWORD attr;
 	TCHAR fn[MAX_PATH];
+	int fnlen;
 
+	// Ask how many files were dropped.
+	num_files = DragQueryFile(hDrop,0xFFFFFFFF,NULL,0);
+	if(num_files!=1) goto done;
 
-	rv=DragQueryFile(hDrop,0xFFFFFFFF,NULL,0);
- 
-	if(rv==1) {  	// check number of files dropped
-		rv=DragQueryFile(hDrop,0,fn,MAX_PATH);
-		if(rv) {
-			if(OkToClosePNG()) OpenPngByName(fn);
-		}
+	// Look up the filename of the dropped file.
+	rv=DragQueryFile(hDrop,0,fn,MAX_PATH);
+	if(!rv) goto done;
+
+	// Don't try to open directories.
+	attr = GetFileAttributes(fn);
+	if(attr&FILE_ATTRIBUTE_DIRECTORY) goto done;
+
+	// Look at the file extension, to guess what type of file was dropped.
+	// We have special handling of .chunk and .icc files.
+	fnlen = lstrlen(fn);
+	if(fnlen>=7 && !_tcsicmp(&fn[fnlen-6],_T(".chunk"))) {
+		// TODO: How to decide where to insert the new chunk?
+		int pos=GetLVFocus(globals.hwndMainList);
+		ImportChunkByFilename(fn,pos);
+	}
+	else if(fnlen>=5 && !_tcsicmp(&fn[fnlen-4],_T(".icc"))) {
+		ImportICCProfileByFilename(png,fn);
 	}
 	else {
-		mesg(MSG_E,_T("Cannot accept multiple dropped files"));
+		// Assume this is a PNG/MNG/JNG file to be opened.
+		if(OkToClosePNG()) {
+			OpenPngByName(fn);
+		}
 	}
+
+done:
 	DragFinish(hDrop);
 }
 
@@ -1845,37 +1869,11 @@ static void CutChunks()
 	}
 }
 
-static void ImportChunk()
+static void ImportChunkByFilename(const TCHAR *fn, int pos)
 {
-	OPENFILENAME ofn;
-	TCHAR fn[MAX_PATH];
 	HANDLE fh;
 	Chunk *c;
-	int pos;
 	DWORD n;
-	BOOL bRet;
-
-	pos=GetLVFocus(globals.hwndMainList);
-
-	StringCchCopy(fn,MAX_PATH,_T(""));
-	ZeroMemory(&ofn,sizeof(OPENFILENAME));
-
-	ofn.lStructSize=sizeof(OPENFILENAME);
-	ofn.hwndOwner=globals.hwndMain;
-	ofn.hInstance=NULL;
-	ofn.lpstrFilter=_T("*.chunk\0*.chunk\0*.*\0*.*\0\0");
-	ofn.nFilterIndex=1;
-	ofn.lpstrTitle=_T("Import chunk...");
-//	if(strlen(last_open_dir))
-//		ofn.lpstrInitialDir=last_open_dir;  // else NULL ==> current dir
-	ofn.lpstrFile=fn;
-	ofn.nMaxFile=MAX_PATH;
-	ofn.Flags=OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_NOCHANGEDIR;
-
-	globals.dlgs_open++;
-	bRet = GetOpenFileName(&ofn);
-	globals.dlgs_open--;
-	if(!bRet) return;
 
 	fh=CreateFile(fn,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL,NULL);
@@ -1904,6 +1902,38 @@ static void ImportChunk()
 	png->fill_listbox(globals.hwndMainList);
 	png->modified();
 	twpng_SetLVSelection(globals.hwndMainList,pos,1);
+}
+
+static void ImportChunk()
+{
+	OPENFILENAME ofn;
+	TCHAR fn[MAX_PATH];
+	int pos;
+	BOOL bRet;
+
+	pos=GetLVFocus(globals.hwndMainList);
+
+	StringCchCopy(fn,MAX_PATH,_T(""));
+	ZeroMemory(&ofn,sizeof(OPENFILENAME));
+
+	ofn.lStructSize=sizeof(OPENFILENAME);
+	ofn.hwndOwner=globals.hwndMain;
+	ofn.hInstance=NULL;
+	ofn.lpstrFilter=_T("*.chunk\0*.chunk\0*.*\0*.*\0\0");
+	ofn.nFilterIndex=1;
+	ofn.lpstrTitle=_T("Import chunk...");
+//	if(strlen(last_open_dir))
+//		ofn.lpstrInitialDir=last_open_dir;  // else NULL ==> current dir
+	ofn.lpstrFile=fn;
+	ofn.nMaxFile=MAX_PATH;
+	ofn.Flags=OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_NOCHANGEDIR;
+
+	globals.dlgs_open++;
+	bRet = GetOpenFileName(&ofn);
+	globals.dlgs_open--;
+	if(!bRet) return;
+
+	ImportChunkByFilename(fn, pos);
 }
 
 static void ExportChunk()

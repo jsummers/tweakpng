@@ -297,6 +297,7 @@ struct edit_chunk_ctx {
 	struct textdlgmetrics tdm;
 };
 
+int ImportICCProfileByFilename(Png *png, const TCHAR *fn);
 int ImportICCProfile(Png *png);
 
 class Chunk {
