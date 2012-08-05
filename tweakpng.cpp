@@ -2106,73 +2106,12 @@ static void SplitIDAT()
 
 }
 
-// mode  0: combine selected  1: combine all
-static void CombineIDAT(int mode)
+static void CombineIDAT_range(int first, int last)
 {
-	int i, first, last;
 	DWORD len,pos;
-	Chunk *c;
+	int i;
 	unsigned char *newdata;
-
-	first= -1; last= -1;
-
-	if(mode==1) {
-		for(i=0;i<png->m_num_chunks;i++) {
-			if( (png->chunk[i]->m_chunktype_id == CHUNK_IDAT) ||
-				(png->chunk[i]->m_chunktype_id == CHUNK_JDAT))
-			{
-				if(first == -1) first=i;
-			}
-			else {
-				if(first!= -1 && last == -1) last= i-1;
-			}
-		}
-	}
-	else {
-
-		for(i=0;i<png->m_num_chunks;i++) {
-			if(ListView_GetItemState(globals.hwndMainList,i,LVIS_SELECTED) & LVIS_SELECTED) {
-				if( (png->chunk[i]->m_chunktype_id != CHUNK_IDAT) &&
-					(png->chunk[i]->m_chunktype_id != CHUNK_JDAT))
-				{
-					mesg(MSG_E,_T("Only IDAT chunks may be selected"));
-					return;
-				}
-				if(first == -1) {
-					first = i;
-				}
-				else if(last != -1) {
-					mesg(MSG_E,_T("Selected chunks must be consecutive"));
-					return;
-				}
-			}
-			else {    // not selected
-				if(first != -1) {
-					if(last == -1) {
-						last = i-1;
-					}
-				}
-			}
-		}
-	}
-	if(first == -1) {
-		if(mode==1)
-			mesg(MSG_E,_T("No IDAT chunks present"));
-		else
-			mesg(MSG_E,_T("Must select IDAT chunks first"));
-		return;
-	}
-	if(last== -1) last=png->m_num_chunks-1;  // not really legal, since IDAT can't be last, but...
-	if(last<=first) {    // only one chunk?
-		if(mode==1) {
-			LVUnselectAll(globals.hwndMainList);
-			twpng_SetLVSelection(globals.hwndMainList,first,1);
-		}
-		else {
-			mesg(MSG_E,_T("Must select more than one IDAT chunk"));
-		}
-		return;
-	}
+	Chunk *c;
 
 	// calculate total length of data in new IDAT chunk
 	len=0;
@@ -2217,11 +2156,168 @@ static void CombineIDAT(int mode)
 	}
 
 	png->m_num_chunks -= (last-first);
-	
+}
+
+static void CombineIDAT_selected()
+{
+	int i, first, last;
+	int idat_count, jdat_count;
+	int chunktype;
+
+	first= -1; last= -1;
+	idat_count=0;
+	jdat_count=0;
+
+	for(i=0;i<png->m_num_chunks;i++) {
+
+		if(ListView_GetItemState(globals.hwndMainList,i,LVIS_SELECTED) & LVIS_SELECTED) {
+			chunktype = png->chunk[i]->m_chunktype_id;
+			if(chunktype==CHUNK_IDAT) {
+				idat_count++;
+			}
+			else if(chunktype==CHUNK_JDAT) {
+				jdat_count++;
+			}
+			else {
+				mesg(MSG_E,_T("Only IDAT chunks may be selected"));
+				return;
+			}
+			if(first == -1) {
+				first = i;
+			}
+			else if(last != -1) {
+				mesg(MSG_E,_T("Selected chunks must be consecutive"));
+				return;
+			}
+		}
+		else {    // not selected
+			if(first != -1) {
+				if(last == -1) {
+					last = i-1;
+				}
+			}
+		}
+	}
+
+	if(first == -1) {
+		mesg(MSG_E,_T("Must select IDAT chunks first"));
+		return;
+	}
+
+	if(last == -1) last=png->m_num_chunks-1;
+
+	if(idat_count>0 && jdat_count>0) {
+		mesg(MSG_E,_T("Selected chunks must be the same type"));
+		return;
+	}
+
+	if(last<=first) {
+		mesg(MSG_E,_T("Must select more than one IDAT chunk"));
+		return;
+	}
+
+	CombineIDAT_range(first,last);
+
 	png->fill_listbox(globals.hwndMainList);
 	twpng_SetLVSelection(globals.hwndMainList,first,1);
 
 	png->modified();
+}
+
+// Locate the first run of 2 or more IDAT or JDAT chunks.
+// Returns 0 if not found.
+static int find_IDAT_range(int *pfirst, int *plast)
+{
+	int prevchunktype = CHUNK_UNKNOWN;
+	int chunktype = CHUNK_UNKNOWN;
+	int i;
+	int in_run = 0;
+
+
+	for(i=0;i<png->m_num_chunks;i++) {
+		chunktype = png->chunk[i]->m_chunktype_id;
+		if(in_run) {
+			if(chunktype==prevchunktype) {
+				// Countinuing a run
+				*plast = i;
+			}
+			else {
+				// End of a run
+				*plast = i-1;
+				return 1;
+			}
+
+		}
+		else {
+			if(chunktype==prevchunktype && (chunktype==CHUNK_IDAT || chunktype==CHUNK_JDAT)) {
+				// Found the start of a run.
+				in_run = 1;
+				*pfirst = i-1;
+			}
+		}
+		prevchunktype = chunktype;
+	}
+
+	if(in_run)
+		return 1;
+	return 0;
+}
+
+static void CombineIDAT_all()
+{
+	int first, last;
+	int ret;
+	int num_idat;
+	int num_ranges;
+	int i;
+	int x;
+
+	// Count number if IDAT/JDAT chunks, and complain if there aren't any.
+	num_idat = 0;
+	for(i=0;i<png->m_num_chunks;i++) {
+		if(png->chunk[i]->m_chunktype_id==CHUNK_IDAT ||
+			png->chunk[i]->m_chunktype_id==CHUNK_JDAT)
+		{
+			num_idat++;
+		}
+	}
+
+	if(num_idat<1) {
+		mesg(MSG_E,_T("No IDAT chunks present"));
+		return;
+	}
+
+	// Find all ranges of 2 or more IDAT/JDAT chunks, and combine them.
+	num_ranges = 0;
+	while(1) {
+		first= -1; last= -1;
+		ret = find_IDAT_range(&first,&last);
+		if(!ret) break;
+		CombineIDAT_range(first,last);
+		num_ranges++;
+	}
+
+	// If we made any changes, refresh the list.
+	if(num_ranges>0) {
+		png->fill_listbox(globals.hwndMainList);
+		twpng_SetLVSelection(globals.hwndMainList,first,1);
+
+		png->modified();
+	}
+
+	// Select all IDAT and JDAT chunks
+	for(i=0;i<png->m_num_chunks;i++) {
+		if(png->chunk[i]->m_chunktype_id==CHUNK_IDAT ||
+			png->chunk[i]->m_chunktype_id==CHUNK_JDAT)
+		{
+			x = LVIS_SELECTED;
+		}
+		else {
+			x = 0;
+		}
+
+		ListView_SetItemState(globals.hwndMainList,i,x,LVIS_SELECTED);
+	}
 }
 
 static void DblClickOnList()
@@ -2948,8 +3044,8 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 			return 0;
 
 		case ID_SPLITIDAT:    SplitIDAT();       return 0;
-		case ID_COMBINEIDAT:     CombineIDAT(0);     return 0;
-		case ID_COMBINEALLIDAT:  CombineIDAT(1);     return 0;
+		case ID_COMBINEIDAT:     CombineIDAT_selected(); return 0;
+		case ID_COMBINEALLIDAT:  CombineIDAT_all();      return 0;
 
 		case ID_IMPORTCHUNK:  ImportChunk();     return 0;
 		case ID_EXPORTCHUNK:  ExportChunk();     return 0;
