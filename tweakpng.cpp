@@ -1151,10 +1151,32 @@ static void ReadSettings()
 	RegCloseKey(key);
 }
 
+// Sets globals.file_from_cmdline.
+static void get_filename_from_cmdline(const TCHAR *lpCmdLine)
+{
+	TCHAR buf[MAX_PATH];
+	int len;
+	DWORD ret;
+
+	if(lpCmdLine[0]=='"') { // if quoted, strip quotes
+		StringCbCopy(buf,sizeof(buf),&lpCmdLine[1]);
+		len = lstrlen(buf);
+		if(len>0 && buf[len-1]=='"') buf[len-1]='\0';
+	}
+	else {
+		StringCbCopy(buf,sizeof(buf),lpCmdLine);
+	}
+
+	// Figure out the full filename.
+	ret = GetFullPathName(buf,MAX_PATH,globals.file_from_cmdline,NULL);
+	if(!ret) {
+		StringCchCopy(globals.file_from_cmdline,MAX_PATH,_T(""));
+	}
+}
+
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
 	MSG msg;
-	TCHAR buf[MAX_PATH];
 	HACCEL hAccTable;
 	int p;
 
@@ -1199,14 +1221,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdL
 
 	StringCchCopy(globals.last_open_dir,MAX_PATH,_T(""));
 
-	StringCchCopy(buf,MAX_PATH-1,lpCmdLine);
-	if(buf[0]=='"') {    // if quoted, strip quotes
-		StringCchCopy(globals.file_from_cmdline,MAX_PATH,&buf[1]);
-		globals.file_from_cmdline[lstrlen(globals.file_from_cmdline)-1]='\0';
-	}
-	else {
-		StringCchCopy(globals.file_from_cmdline,MAX_PATH,buf);
-	}
+	get_filename_from_cmdline(lpCmdLine);
 
 	make_crc_table();
 
