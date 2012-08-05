@@ -872,6 +872,8 @@ int Chunk::has_valid_length()
 		return (length==9);
 	case CHUNK_tIME:
 		return (length==7);
+	case CHUNK_JHDR:
+		return (length==16);
 	case CHUNK_MHDR:
 		return (length==28);
 	case CHUNK_oFFs:
@@ -932,17 +934,90 @@ void Chunk::describe_IHDR(TCHAR *buf, int buflen)
 	StringCchCat(buf,buflen,buf2);
 }
 
+void Chunk::describe_JHDR(TCHAR *buf, int buflen)
+{
+	TCHAR buf2[500];
+	int x,ct;
+
+	if(msg_if_invalid_length(buf,buflen,_T("JNG file header"))) return;
+
+	StringCchPrintf(buf,buflen,_T("JNG file header: %u") SYM_TIMES _T("%u"),
+		(unsigned int)read_int32(&data[0]),
+		(unsigned int)read_int32(&data[4]) );
+
+	ct = (int)data[8];
+	switch(ct) {
+	case 8: StringCbPrintf(buf2,sizeof(buf2),_T(", grayscale")); break;
+	case 10: StringCbPrintf(buf2,sizeof(buf2),_T(", color")); break;
+	case 12: StringCbPrintf(buf2,sizeof(buf2),_T(", grayscale+alpha")); break;
+	case 14: StringCbPrintf(buf2,sizeof(buf2),_T(", color+alpha")); break;
+	default: StringCbPrintf(buf2,sizeof(buf2),_T(", color type=%d"),ct);
+	}
+	StringCchCat(buf,buflen,buf2);
+
+	x = (int)data[9]; // Image_sample_depth
+	if(x==20)
+		StringCbPrintf(buf2,sizeof(buf2),_T(", 8 and 12-bit"));
+	else
+		StringCbPrintf(buf2,sizeof(buf2),_T(", %d-bit"),x);
+	StringCchCat(buf,buflen,buf2);
+
+	if(data[11]==8) { // Image_interlace_method
+		StringCchCat(buf,buflen,_T(", progressive"));
+	}
+
+	if(ct==12 || ct==14) { // If an alpha channel is present...
+		x = (int)data[12]; // Alpha_sample_depth
+		StringCbPrintf(buf2,sizeof(buf2),_T(", alpha: %d-bit"),x);
+		StringCchCat(buf,buflen,buf2);
+
+		x = (int)data[13]; // Alpha_compression_method
+		switch(x) {
+		case 0: StringCbPrintf(buf2,sizeof(buf2),_T(", alpha cmpr.: PNG")); break;
+		case 8: StringCbPrintf(buf2,sizeof(buf2),_T(", alpha cmpr.: JDAA")); break;
+		default: StringCbPrintf(buf2,sizeof(buf2),_T(""));
+		}
+		StringCchCat(buf,buflen,buf2);
+	}
+}
 
 void Chunk::describe_MHDR(TCHAR *buf, int buflen)
 {
+	TCHAR buf2[500];
+	unsigned int u;
+
 	if(msg_if_invalid_length(buf,buflen,_T("MNG file header"))) return;
 
-	StringCchPrintf(buf,buflen,_T("MNG file header: %ux%u"),
-	(DWORD)read_int32(&data[0]),
-	(DWORD)read_int32(&data[4]) );
+	StringCchPrintf(buf,buflen,_T("MNG file header: %u") SYM_TIMES _T("%u"),
+		(unsigned int)read_int32(&data[0]),
+		(unsigned int)read_int32(&data[4]) );
 
+	u=read_int32(&data[8]); // Ticks_per_second
+	StringCbPrintf(buf2,sizeof(buf2),_T(", %u ticks/sec."),u);
+	StringCchCat(buf,buflen,buf2);
+
+	u=read_int32(&data[12]); // Nominal_layer_count
+	if(u) {
+		StringCbPrintf(buf2,sizeof(buf2),_T(", %u layers"),u);
+		StringCchCat(buf,buflen,buf2);
+	}
+
+	u=read_int32(&data[16]); // Nominal_frame_count
+	if(u) {
+		StringCbPrintf(buf2,sizeof(buf2),_T(", %u frames"),u);
+		StringCchCat(buf,buflen,buf2);
+	}
+
+	u=read_int32(&data[20]); // Nominal_play_time
+	if(u) {
+		StringCbPrintf(buf2,sizeof(buf2),_T(", %u ticks"),u);
+		StringCchCat(buf,buflen,buf2);
+	}
+
+	u=read_int32(&data[24]); // Simplicity_profile
+	StringCbPrintf(buf2,sizeof(buf2),_T(", profile: 0x%08x"),u);
+	StringCchCat(buf,buflen,buf2);
 }
-
 
 void Chunk::describe_IEND(TCHAR *buf, int buflen)
 {
@@ -1795,7 +1870,7 @@ void Chunk::get_text_descr(TCHAR *buf, int buflen)
 	case CHUNK_LOOP: StringCchCopy(buf,buflen,_T("start of loop")); break;
 	case CHUNK_ENDL: StringCchCopy(buf,buflen,_T("end of loop")); break;
 	case CHUNK_DEFI: StringCchCopy(buf,buflen,_T("define an object")); break;
-	case CHUNK_JHDR: StringCchCopy(buf,buflen,_T("JNG header")); break;
+	case CHUNK_JHDR: describe_JHDR(buf,buflen); break;
 	case CHUNK_BASI: StringCchCopy(buf,buflen,_T("PNG chunks")); break;
 	case CHUNK_CLON: StringCchCopy(buf,buflen,_T("clone an object")); break;
 	case CHUNK_DHDR: StringCchCopy(buf,buflen,_T("Delta-PNG datastream header")); break;

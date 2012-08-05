@@ -352,6 +352,7 @@ public:
 private:
 
 	void describe_IHDR(TCHAR *buf, int buflen);
+	void describe_JHDR(TCHAR *buf, int buflen);
 	void describe_MHDR(TCHAR *buf, int buflen);
 	void describe_IEND(TCHAR *buf, int buflen);
 	void describe_bKGD(TCHAR *buf, int buflen);

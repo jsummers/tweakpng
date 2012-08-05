@@ -116,6 +116,10 @@ Extensions:
  fcTL    yes             yes             yes
  fdAT    seq# only       seq# only       no
 
+MNG/JNG:
+ MHDR:   yes             no              no
+ JHDR:   yes             no              no
+
 
 (*) iTXt chunks are only supported if TweakPNG is built as a Unicode
 application.
@@ -405,9 +409,7 @@ unreliable in MNG files, because TweakPNG does not know how to correctly
 associate PLTE and bKGD and tRNS chunks if there are more than one of 
 each.
 
-The combine/split IDAT functions will also work on JDAT chunks, but the 
-Combine all IDAT function is not appropriate for MNG files, because it 
-only combines the first range of IDAT/JDAT chunks found in the file.
+The combine/split IDAT functions will also work on JDAT chunks.
 
 
 ==================== Source Code ====================
