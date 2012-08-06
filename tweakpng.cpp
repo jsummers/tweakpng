@@ -1269,17 +1269,70 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdL
 	return (int)msg.wParam;
 }
 
+struct filename_path_struct {
+	const TCHAR *full_fn;
+	const TCHAR *base_fn; // pointer into .full_fn
+	TCHAR path[MAX_PATH];
+};
+
+// Caller sets fnp->full_fn; we calculate ->path and ->base_fn.
+static int parse_filename_path(struct filename_path_struct *fnp)
+{
+	const TCHAR *sep;
+	size_t sep_pos;
+
+	sep = _tcsrchr(fnp->full_fn,'\\');
+	if(!sep) {
+		// Filename does not include a path
+		fnp->base_fn = fnp->full_fn;
+		fnp->path[0] = '\0';
+		return 0;
+	}
+
+	sep_pos = sep - fnp->full_fn; // Pointer arithmetic
+
+	// Make a copy of the full path...
+	StringCchCopy(fnp->path,MAX_PATH,fnp->full_fn);
+	// and truncate it after the last backslash.
+	fnp->path[sep_pos+1] = '\0';
+
+	fnp->base_fn = &fnp->full_fn[sep_pos+1];
+	return 1;
+}
+
 // set the titlebar text for the main window
 static void SetTitle(Png *p)
 {
 	TCHAR buf[1024];
-	if(p) {
-		StringCchPrintf(buf,1024,_T("%s%s - TweakPNG"),p->m_filename,p->m_dirty?_T("*"):_T(""));
-		SetWindowText(globals.hwndMain,buf);
-	}
-	else {
+	int buf_valid = 0;
+	const TCHAR *basefn = NULL;
+	struct filename_path_struct fnp;
+	int ret;
+
+	if(!p) {
 		SetWindowText(globals.hwndMain,_T("TweakPNG"));
+		return;
 	}
+
+	if(p->m_named) {
+		// TODO: The filename is parsed more often than necessary.
+		fnp.full_fn = p->m_filename;
+		ret = parse_filename_path(&fnp);
+
+		if(ret) {
+			// Special format for filenames with paths.
+			StringCbPrintf(buf,sizeof(buf),_T("%s%s (%s) - TweakPNG"),fnp.base_fn,
+				p->m_dirty?_T("*"):_T(""),fnp.path);
+			buf_valid = 1;
+		}
+	}
+
+	if(!buf_valid) {
+		StringCbPrintf(buf,sizeof(buf),_T("%s%s - TweakPNG"),p->m_filename,
+			p->m_dirty?_T("*"):_T(""));
+	}
+
+	SetWindowText(globals.hwndMain,buf);
 }
 
 // Unconditionally close the current document, and update the UI.
