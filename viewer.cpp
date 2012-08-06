@@ -366,6 +366,30 @@ void Viewer::GoodScrollPos()
 	}
 }
 
+// Returns TRUE if the keystroke was handled.
+BOOL Viewer::HandleKeyDown(HWND hwnd, WPARAM wParam, LPARAM lParam)
+{
+	int needrefresh=0;
+	int handled=FALSE;
+
+	// TODO:
+	// I can't decide if the arrow keys should move the image, or the viewport.
+	// Neither one feels right.
+	// Maybe it should be an option. Maybe it should even depend on whether the
+	// entire image fits into the viewport.
+	// A positive step moves the image; negative moves the viewport.
+	int step = 30;
+
+	switch(wParam) {
+	case VK_LEFT:  m_imgpos_x-=step; needrefresh=1; handled=TRUE; break;
+	case VK_RIGHT: m_imgpos_x+=step; needrefresh=1; handled=TRUE; break;
+	case VK_UP:    m_imgpos_y-=step; needrefresh=1; handled=TRUE; break;
+	case VK_DOWN:  m_imgpos_y+=step; needrefresh=1; handled=TRUE; break;
+	}
+
+	if(needrefresh) InvalidateRect(hwnd,NULL,TRUE);
+	return handled;
+}
 
 LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -525,6 +549,12 @@ LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 			InvalidateRect(hwnd,NULL,TRUE);
 		}
 		return 0;
+
+	case WM_KEYDOWN:
+		if(v->HandleKeyDown(hwnd,wParam,lParam)) {
+			return 0;
+		}
+		break;
 
 	case WM_CLOSE: // The user clicked the [x] for the window.
 		globals.autoopen_viewer=0;

@@ -496,6 +496,7 @@ private:
 	int m_dragstart_x, m_dragstart_y;
 	void GoodScrollPos();
 	void CalcStretchedSize();
+	BOOL HandleKeyDown(HWND hwnd, WPARAM wParam, LPARAM lParam);
 	RECT m_clientrect;
 };
 
