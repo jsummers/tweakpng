@@ -1500,7 +1500,7 @@ int Chunk::set_text_info(const TCHAR *keyword,
 	length=0;
 
 	if(is_compressed) {
-#ifdef HAVE_ZLIB
+#ifdef TWPNG_HAVE_ZLIB
 		cmpr_text_len=twpng_compress_data(&cmpr_text,(unsigned char*)text_mbcs,text_len);
 #else
 		cmpr_text_len=0;
