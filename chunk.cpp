@@ -2209,12 +2209,6 @@ static void Dlg_tEXt_OK(HWND hwnd, Chunk *ch)
 	tmptext=(TCHAR*)malloc((sizeof(TCHAR))*(len+1));
 	GetWindowText(h,tmptext,len+1);
 
-	// I'm not sure how to write zTXt chunks for zero-length
-	// text, so I won't let the user make one.
-	if(lstrlen(tmptext)<1) {
-		is_cmpr = 0;
-	}
-
 	crlf2lf(tmptext);
 
 	GetDlgItemText(hwnd,IDC_TEXTKEYWORD,keyword,80);
