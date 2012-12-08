@@ -268,10 +268,7 @@ struct text_info_struct {
 	int processed;
 	int is_compressed;
 	TCHAR *text; // not necessarily NUL terminated?
-	//unsigned char *uncompressed_data;   // used only for zTXt
-	//int uncompressed_data_size;
 	int text_size_in_tchars; // not including trailing NUL (is there a trailing NUL?)
-	int uncompressed_data_tried;  // did we try and fail to uncompress?
 	TCHAR *keyword;
 	TCHAR *language;
 	TCHAR *translated_keyword;

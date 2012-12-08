@@ -255,6 +255,8 @@ int twpng_compress_data(unsigned char **dataoutp, unsigned char*datain, int inle
 	return z.total_out;
 }
 
+// On success, sets *dataoutp to an alloc'd memory block, and returns its length.
+// On failure, sets *dataoutp to NULL, and returns 0.
 int twpng_uncompress_data(unsigned char **dataoutp, unsigned char *datain, int inlen)
 {
 	int alloced=0;
@@ -266,6 +268,8 @@ int twpng_uncompress_data(unsigned char **dataoutp, unsigned char *datain, int i
 	int errflag;
 	TCHAR errmsg[200];
 
+	*dataoutp = NULL;
+
 	// We uncompress it once just to figure out how big a buffer we
 	// need to allocate. It's wasteful, but no big deal
 	// in this program, I think.
@@ -274,7 +278,6 @@ int twpng_uncompress_data(unsigned char **dataoutp, unsigned char *datain, int i
 		mesg(MSG_E,_T("inflate error: %s"),errmsg);
 		return 0;
 	}
-	assert((*dataoutp)==NULL);
 
 	alloced=unc_size+50;       // just unc_size should work
 
@@ -297,11 +300,13 @@ int twpng_uncompress_data(unsigned char **dataoutp, unsigned char *datain, int i
 	inflateInit(&z);
 
 	ret = inflate(&z,Z_FINISH);
+	inflateEnd(&z);
+
 	if(ret != Z_STREAM_END) {
 		mesg(MSG_E,_T("decompression error"));
+		free(dataout);
+		return 0;
 	}
-
-	inflateEnd(&z);
 
 	(*dataoutp)=dataout;
 	return z.total_out;
@@ -1684,8 +1689,6 @@ int Chunk::get_text_info()
 	if(p>(int)length) return 0;
 
 	if(m_text_info.is_compressed) {
-		m_text_info.uncompressed_data_tried=1;
-
 		if(cmpr_method!=0) {   // unknown compression method: force failure
 			return 0;
 		}
@@ -1699,8 +1702,6 @@ int Chunk::get_text_info()
 		}
 	}
 	else { // uncompressed text
-		m_text_info.uncompressed_data_tried=1;
-
 		if(text_is_utf8) {
 #ifdef UNICODE
 			convert_utf8_to_utf16(&data[p],length-p,&m_text_info.text,&m_text_info.text_size_in_tchars);
@@ -2054,7 +2055,6 @@ Chunk::Chunk()
 	m_text_info.processed=0;
 	m_text_info.is_compressed=0;
 	m_text_info.text=NULL;
-	m_text_info.uncompressed_data_tried=0;
 	m_text_info.keyword=NULL;
 	m_text_info.language=NULL;
 	m_text_info.translated_keyword=NULL;
@@ -2076,11 +2076,9 @@ void Chunk::free_text_info()
 	m_text_info.is_compressed=0;
 	m_text_info.text=NULL;
 	m_text_info.text_size_in_tchars=0;
-	m_text_info.uncompressed_data_tried=0;
 	m_text_info.keyword=NULL;
 	m_text_info.language=NULL;
 	m_text_info.translated_keyword=NULL;
-
 }
 
 // call this after setting the data for the chunk
