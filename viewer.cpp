@@ -149,6 +149,9 @@ void Viewer::UpdateViewerWindowTitle()
 	if(!globals.use_gamma) {
 		StringCbCat(title,sizeof(title),_T(" [gamma off]"));
 	}
+	if(!globals.use_custombg && !globals.use_imagebg) {
+		StringCbCat(title,sizeof(title),_T(" [background off]"));
+	}
 
 	::SetWindowText(m_hwndViewer,title);
 }
@@ -577,16 +580,19 @@ LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 		case ID_BG_CUSTOM:
 			globals.use_imagebg = 0;
 			globals.use_custombg = 1;
+			v->UpdateViewerWindowTitle();
 			update_viewer();
 			return 0;
 		case ID_BG_IMAGEORCUSTOM:
 			globals.use_imagebg = 1;
 			globals.use_custombg = 1;
+			v->UpdateViewerWindowTitle();
 			update_viewer();
 			return 0;
 		case ID_BG_STRIPALPHA:
 			globals.use_imagebg = 0;
 			globals.use_custombg = 0;
+			v->UpdateViewerWindowTitle();
 			update_viewer();
 			return 0;
 		case ID_WBG_SAMEASIMAGE:
