@@ -1599,10 +1599,6 @@ static int uncompress_text(struct text_info_struct *ti, unsigned char *cmpr_text
 	ti->text_size_in_tchars=0;
 	unc_text_size=twpng_uncompress_data(&unc_text, cmpr_text, cmpr_text_len);
 	if(unc_text==NULL) return 0;
-	if(unc_text_size<1) {
-		free(unc_text);
-		return 0;
-	}
 
 	if(is_utf8) {
 #ifdef UNICODE
@@ -1611,7 +1607,7 @@ static int uncompress_text(struct text_info_struct *ti, unsigned char *cmpr_text
 	}
 	else {
 
-		ti->text = (TCHAR*)malloc(sizeof(TCHAR)*unc_text_size);
+		ti->text = (TCHAR*)malloc(sizeof(TCHAR)*(unc_text_size?unc_text_size:1));
 		if(!ti->text) return 0;
 		ti->text_size_in_tchars = unc_text_size;
 		for(i=0;i<ti->text_size_in_tchars;i++) {
