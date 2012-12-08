@@ -474,10 +474,12 @@ LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 			m=(HMENU)wParam;
 			CheckMenuItem(m,ID_GAMMACORRECT,MF_BYCOMMAND|
 				(globals.use_gamma?MF_CHECKED:MF_UNCHECKED));
-			CheckMenuItem(m,ID_BG_BKGD,MF_BYCOMMAND|
-				(globals.use_imagebg?MF_CHECKED:MF_UNCHECKED));
 			CheckMenuItem(m,ID_BG_CUSTOM,MF_BYCOMMAND|
-				(globals.use_custombg?MF_CHECKED:MF_UNCHECKED));
+				(globals.use_custombg==1 && globals.use_imagebg==0 ? MF_CHECKED:MF_UNCHECKED));
+			CheckMenuItem(m,ID_BG_IMAGEORCUSTOM,MF_BYCOMMAND|
+				(globals.use_custombg && globals.use_imagebg ? MF_CHECKED:MF_UNCHECKED));
+			CheckMenuItem(m,ID_BG_STRIPALPHA,MF_BYCOMMAND|
+				(globals.use_custombg==0 && globals.use_imagebg==0 ? MF_CHECKED:MF_UNCHECKED));
 
 			CheckMenuItem(m,ID_WBG_SAMEASIMAGE,MF_BYCOMMAND|
 				(globals.window_bgcolor==TWPNG_WBG_SAMEASIMAGE?MF_CHECKED:MF_UNCHECKED));
@@ -573,11 +575,18 @@ LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 			update_viewer();
 			return 0;
 		case ID_BG_CUSTOM:
-			globals.use_custombg = !globals.use_custombg;
+			globals.use_imagebg = 0;
+			globals.use_custombg = 1;
 			update_viewer();
 			return 0;
-		case ID_BG_BKGD:
-			globals.use_imagebg = !globals.use_imagebg;
+		case ID_BG_IMAGEORCUSTOM:
+			globals.use_imagebg = 1;
+			globals.use_custombg = 1;
+			update_viewer();
+			return 0;
+		case ID_BG_STRIPALPHA:
+			globals.use_imagebg = 0;
+			globals.use_custombg = 0;
 			update_viewer();
 			return 0;
 		case ID_WBG_SAMEASIMAGE:

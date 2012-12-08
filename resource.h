@@ -43,6 +43,9 @@
 #define IDC_COLORTYPE                   1044
 #define IDC_CHECK1                      1045
 #define IDC_STATIC1                     1046
+#define ID_BG_CUSTOM                    1047
+#define ID_BG_IMAGEORCUSTOM             1048
+#define ID_BG_STRIPALPHA                1049
 #define IDC_SETBKGD                     1050
 #define IDC_STATIC2                     1051
 #define IDC_EDITALPHA                   1053
@@ -54,8 +57,6 @@
 #define IDC_ADDTOMENU                   1060
 #define IDC_ININCHES                    1061
 #define ID_GAMMACORRECT                 1062
-#define ID_BG_BKGD                      1063
-#define ID_BG_CUSTOM                    1064
 #define ID_SETBG                        1065
 #define ID_CLOSE                        1066
 #define IDC_EDITALLALPHA                1067

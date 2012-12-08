@@ -150,8 +150,9 @@ BEGIN
     BEGIN
         MENUITEM "&Gamma Correction",           ID_GAMMACORRECT
         MENUITEM SEPARATOR
-        MENUITEM "Use &Image's Background Color", ID_BG_BKGD
         MENUITEM "Use &Custom Background Color", ID_BG_CUSTOM
+        MENUITEM "Use &Image Or Custom Background", ID_BG_IMAGEORCUSTOM
+        MENUITEM "Strip Alpha Channel", ID_BG_STRIPALPHA
         MENUITEM SEPARATOR
         MENUITEM "Set Custom &Background Color...", ID_SETBG
         POPUP "Window Background Color"
