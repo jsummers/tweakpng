@@ -1948,6 +1948,10 @@ void Chunk::get_text_descr_generic(TCHAR *buf, int buflen)
 	if(is_critical()) StringCchCat(buf,buflen,_T("critical"));
 	else StringCchCat(buf,buflen,_T("ancillary"));
 
+	if(!is_public()) {
+		StringCchCat(buf,buflen,_T(", private"));
+	}
+
 	if(!is_critical()) {  // safe-to-copy is not used for critical chunks
 		if(is_safe_to_copy()) StringCchCat(buf,buflen,_T(", safe to copy"));
 		else StringCchCat(buf,buflen,_T(", unsafe to copy"));
