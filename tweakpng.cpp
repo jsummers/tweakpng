@@ -595,6 +595,14 @@ void Png::new_chunk(int newid)
 		write_int16(&c->data[22],100); // delay denominator
 		break;
 
+	case CHUNK_vpAg:
+		c->length=9;
+		c->data = (unsigned char*)malloc(c->length);
+		write_int32(&c->data[0],0);
+		write_int32(&c->data[4],0);
+		c->data[8]=0;
+		break;
+
 	default:
 		ok=0;
 	}
@@ -2925,7 +2933,7 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 				ID_NEWIHDR,
 				ID_NEWSRGB,ID_NEWTIME,ID_NEWCHRM,ID_NEWTRNS,ID_NEWSBIT,
 				ID_NEWPLTE,ID_NEWSTER,ID_NEWACTL,ID_NEWFCTL,ID_NEWOFFS,
-				ID_NEWSCAL,
+				ID_NEWSCAL,ID_NEWVPAG,
 				ID_COMBINEALLIDAT,
 				ID_IMPORTCHUNK,ID_IMPORTICCPROF,ID_SIGNATURE,ID_CHECKPNG,
 				ID_TOOL_1,ID_TOOL_2,ID_TOOL_3,ID_TOOL_4,ID_TOOL_5,ID_TOOL_6,
@@ -3133,6 +3141,7 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 		case ID_NEWTEXT: png->new_chunk(CHUNK_tEXt); return 0;
 		case ID_NEWTIME: png->new_chunk(CHUNK_tIME); return 0;
 		case ID_NEWTRNS: png->new_chunk(CHUNK_tRNS); return 0;
+		case ID_NEWVPAG: png->new_chunk(CHUNK_vpAg); return 0;
 
 		case ID_CUT:    CutChunks();     return 0;
 		case ID_COPY:   CopyChunks();    return 0;

@@ -115,6 +115,7 @@ Extensions:
  acTL    yes             yes             yes
  fcTL    yes             yes             yes
  fdAT    seq# only       seq# only       no
+ vpAg    yes             yes             yes
 
 MNG/JNG:
  MHDR:   yes             no              no

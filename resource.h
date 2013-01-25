@@ -144,13 +144,14 @@
 #define ID_NEWOFFS                      40065
 #define ID_NEWSCAL                      40066
 #define ID_IMPORTICCPROF                40067
+#define ID_NEWVPAG                      40068
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        129
-#define _APS_NEXT_COMMAND_VALUE         40068
+#define _APS_NEXT_COMMAND_VALUE         40100
 #define _APS_NEXT_CONTROL_VALUE         1090
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

@@ -132,6 +132,7 @@ static const chunk_id_struct_t chunk_id_list[] = {
 	{CHUNK_fcTL,"fcTL"},
 	{CHUNK_fdAT,"fdAT"},
 	{CHUNK_CgBI,"CgBI"},
+	{CHUNK_vpAg,"vpAg"},
 
 	{CHUNK_MHDR,"MHDR"},
 	{CHUNK_MEND,"MEND"},
@@ -618,6 +619,7 @@ int can_edit_chunk_type(int ct)
 	case CHUNK_pHYs: case CHUNK_tIME: case CHUNK_sTER:
 	case CHUNK_acTL: case CHUNK_fcTL: case CHUNK_fdAT:
 	case CHUNK_oFFs: case CHUNK_sCAL: case CHUNK_iCCP:
+	case CHUNK_vpAg:
 		return 1;
 	case CHUNK_zTXt:
 		return globals.zlib_available;
@@ -791,6 +793,11 @@ plte_start:
 		changed=  DialogBoxParam(globals.hInst,_T("DLG_ICCPROFILE"),globals.hwndMain,
 		    DlgProcEditChunk, (LPARAM)&ecctx);
 		break;
+
+	case CHUNK_vpAg:
+		changed=  DialogBoxParam(globals.hInst,_T("DLG_VPAG"),globals.hwndMain,
+		    DlgProcEditChunk, (LPARAM)&ecctx);
+		break;
 	}
 
 	if(changed>0) chunkmodified();    // update crc
@@ -891,6 +898,8 @@ int Chunk::has_valid_length()
 		return (length==26);
 	case CHUNK_fdAT:
 		return (length>=4);
+	case CHUNK_vpAg:
+		return (length==9);
 	}
 
 	return 1;
@@ -1327,6 +1336,26 @@ void Chunk::describe_oFFs(TCHAR *buf, int buflen)
 	case 0: StringCchCat(buf,buflen,_T("pixels")); break;
 	case 1: StringCchCat(buf,buflen,SYM_MICROMETERS); break;
 	default: StringCchCat(buf,buflen,_T("(invalid units)"));
+	}
+}
+
+void Chunk::describe_vpAg(TCHAR *buf, int buflen)
+{
+	StringCchPrintf(buf,buflen,_T("vpAg"));
+	int xpos,ypos;
+
+	if(msg_if_invalid_length(buf,buflen,_T("virtual page"))) return;
+
+	xpos=(int)read_int32(&data[0]);
+	ypos=(int)read_int32(&data[4]);
+
+	StringCchPrintf(buf,buflen,_T("virtual page = %d") SYM_TIMES _T("%d "),xpos,ypos);
+
+	switch(data[8]) {
+	case 0: StringCchCat(buf,buflen,_T("pixels")); break;
+		// I can't find documentation about any unit codes other than 0, though
+		// I'd guess it's the same as the oFFs chunk.
+	default: StringCchCat(buf,buflen,_T("(unknown units)"));
 	}
 }
 
@@ -1899,6 +1928,7 @@ void Chunk::get_text_descr(TCHAR *buf, int buflen)
 	case CHUNK_fcTL: describe_fcTL(buf,buflen); break;
 	case CHUNK_fdAT: describe_fdAT(buf,buflen); break;
 	case CHUNK_CgBI: StringCchCopy(buf,buflen,_T("iPhone PNG-like file header")); break;
+	case CHUNK_vpAg: describe_vpAg(buf,buflen); break;
 
 	default:
 		if(!is_public()) {
@@ -2599,6 +2629,12 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		case CHUNK_iCCP:
 			ch->init_iCCP_dlg(p,hwnd);
 			break;
+
+		case CHUNK_vpAg:
+			SetDlgItemInt(hwnd,IDC_EDIT1,read_int32(&ch->data[0]),TRUE);
+			SetDlgItemInt(hwnd,IDC_EDIT2,read_int32(&ch->data[4]),TRUE);
+			SetDlgItemInt(hwnd,IDC_EDIT3,(UINT)ch->data[8],FALSE);
+			break;
 		}
 		return 1;
 	}
@@ -2850,6 +2886,15 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
 			case CHUNK_iCCP:
 				ch->process_iCCP_dlg(p,hwnd);
+				break;
+
+			case CHUNK_vpAg:
+				tmpint1=(int)GetDlgItemInt(hwnd,IDC_EDIT1,NULL,TRUE);
+				tmpint2=(int)GetDlgItemInt(hwnd,IDC_EDIT2,NULL,TRUE);
+				write_int32(&ch->data[0],tmpint1);
+				write_int32(&ch->data[4],tmpint2);
+				tmpint1=(int)GetDlgItemInt(hwnd,IDC_EDIT3,NULL,FALSE);
+				ch->data[8]=(unsigned char)tmpint1;
 				break;
 			}
 			EndDialog(hwnd,1);

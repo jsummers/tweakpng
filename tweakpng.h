@@ -112,6 +112,7 @@
 
 // Other known private chunks
 #define CHUNK_CgBI 310
+#define CHUNK_vpAg 311
 
 // registered PNG extensions:
 #define CHUNK_oFFs  501
@@ -370,6 +371,7 @@ private:
 	void describe_fdAT(TCHAR *buf, int buflen);
 	void describe_oFFs(TCHAR *buf, int buflen);
 	void describe_sCAL(TCHAR *buf, int buflen);
+	void describe_vpAg(TCHAR *buf, int buflen);
 	void describe_keyword_chunk(TCHAR *buf, int buflen, const TCHAR *prefix);
 
 	int edit_plte_info();
