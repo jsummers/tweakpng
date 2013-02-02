@@ -598,8 +598,8 @@ void Png::new_chunk(int newid)
 	case CHUNK_vpAg:
 		c->length=9;
 		c->data = (unsigned char*)malloc(c->length);
-		write_int32(&c->data[0],0);
-		write_int32(&c->data[4],0);
+		write_int32(&c->data[0],m_width);
+		write_int32(&c->data[4],m_height);
 		c->data[8]=0;
 		break;
 
