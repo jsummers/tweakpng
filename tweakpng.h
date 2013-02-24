@@ -457,7 +457,7 @@ private:
 	void init_new_chunk(int);
 
 	int read_signature(HANDLE fh);
-	int read_next_chunk(HANDLE fh);
+	int read_next_chunk(HANDLE fh, DWORD *filepos);
 
 };
 

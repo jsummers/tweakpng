@@ -761,13 +761,14 @@ int Png::read_signature(HANDLE fh)
 	return IMG_UNKNOWN;
 }
 
-int Png::read_next_chunk(HANDLE fh)
+int Png::read_next_chunk(HANDLE fh, DWORD *filepos)
 {
 	DWORD n;
 	Chunk *c;
 	unsigned char fbuf[8];
 	DWORD ccrc;
 	int r;
+	int i;
 
 	// first 4 bytes are the chunk data length,
 	// next 4 bytes are the chunk type
@@ -790,14 +791,23 @@ int Png::read_next_chunk(HANDLE fh)
 
 	memcpy(c->m_chunktype_ascii,&fbuf[4],4);
 	c->m_chunktype_ascii[4]='\0';  // null-terminate for convenience
+	for(i=0;i<4;i++) {
+		if( !((c->m_chunktype_ascii[i]>='a' && c->m_chunktype_ascii[i]<='z') ||
+			(c->m_chunktype_ascii[i]>='A' && c->m_chunktype_ascii[i]<='Z')))
+		{
+			mesg(MSG_W,_T("Invalid chunk type found at file position %u. ")
+				_T("This may indicate garbage at the end of the file."),*filepos);
+			delete c;
+			return 0;
+		}
+	}
 	c->set_chunktype_tchar_from_ascii();
 
 	// now read the data
 	if(c->length>0) {
 
-		// A sanity test for the chunk length. This ought to compare to the 
-		// remaining bytes instead of the total size, but it's no big deal.
-		if(c->length > m_pngfilesize) {
+		// A sanity test for the chunk length.
+		if(c->length > m_pngfilesize - *filepos - 12) {
 			mesg(MSG_W,_T("Bogus chunk length found. This may indicate garbage at the end of the file."));
 			delete c;
 			return 0;
@@ -841,6 +851,8 @@ int Png::read_next_chunk(HANDLE fh)
 	chunk[m_num_chunks++]=c;
 
 	c->after_init();
+
+	*filepos += c->length + 12;
 	return 1;
 }
 
@@ -878,6 +890,8 @@ Png::Png(const TCHAR *load_fn, const TCHAR *save_fn)
 {
 	int okay;
 	HANDLE fh;
+	DWORD filepos;
+
 	m_valid=0;
 
 	m_num_chunks=0;
@@ -911,8 +925,10 @@ Png::Png(const TCHAR *load_fn, const TCHAR *save_fn)
 		return;
 	}
 
+	filepos = 8;
+
 	while(okay) {
-		okay=read_next_chunk(fh);
+		okay=read_next_chunk(fh,&filepos);
 	}
 
 	CloseHandle(fh);
