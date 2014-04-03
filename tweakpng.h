@@ -196,6 +196,7 @@ struct globals_struct {
 	int autoopen_viewer;
 	HCURSOR hcurDrag2;
 	int viewer_imgpos_x, viewer_imgpos_y;
+	int viewer_correct_nonsquare;
 	struct windowprefs_struct window_prefs;
 	HWND hwndMainList;
 	HWND hwndStBar;

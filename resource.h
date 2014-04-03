@@ -146,6 +146,7 @@
 #define ID_IMPORTICCPROF                40067
 #define ID_NEWVPAG                      40068
 #define ID_COPYIMAGE                    40069
+#define ID_CORRECTNONSQUARE             40070
 
 // Next default values for new objects
 // 

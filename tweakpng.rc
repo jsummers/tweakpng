@@ -166,6 +166,8 @@ BEGIN
             MENUITEM "Custom Background Color",     ID_WBG_CUSTOM
             MENUITEM "System Default",              ID_WBG_SYSDEFAULT
         END
+		MENUITEM SEPARATOR
+		MENUITEM "Correct for Nonsquare Pixels",    ID_CORRECTNONSQUARE
     END
     POPUP "&Zoom"
     BEGIN

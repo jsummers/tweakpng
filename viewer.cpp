@@ -288,7 +288,12 @@ void Viewer::Update(Png *png1)
 
 	m_adjwidth = m_dib->biWidth;
 	m_adjheight = m_dib->biHeight;
-	rv=p2d_get_density(p2d, &dens_x, &dens_y, &dens_units);
+
+	if(globals.viewer_correct_nonsquare)
+		rv=p2d_get_density(p2d, &dens_x, &dens_y, &dens_units);
+	else
+		rv=0;
+
 	if(rv) {
 		if(dens_x!=dens_y && dens_x>0 && dens_y>0 &&
 			10*dens_x>dens_y && 10*dens_y>dens_x)
@@ -517,6 +522,8 @@ LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 			EnableMenuItem(m,ID_COPYIMAGE,MF_BYCOMMAND|(v->m_dib?MF_ENABLED:MF_GRAYED));
 			CheckMenuItem(m,ID_GAMMACORRECT,MF_BYCOMMAND|
 				(globals.use_gamma?MF_CHECKED:MF_UNCHECKED));
+			CheckMenuItem(m,ID_CORRECTNONSQUARE,MF_BYCOMMAND|
+				(globals.viewer_correct_nonsquare?MF_CHECKED:MF_UNCHECKED));
 			CheckMenuItem(m,ID_BG_CUSTOM,MF_BYCOMMAND|
 				(globals.use_custombg==1 && globals.use_imagebg==0 ? MF_CHECKED:MF_UNCHECKED));
 			CheckMenuItem(m,ID_BG_IMAGEORCUSTOM,MF_BYCOMMAND|
@@ -618,6 +625,10 @@ LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 		case ID_GAMMACORRECT:
 			globals.use_gamma = !globals.use_gamma;
 			v->UpdateViewerWindowTitle();
+			update_viewer();
+			return 0;
+		case ID_CORRECTNONSQUARE:
+			globals.viewer_correct_nonsquare = !globals.viewer_correct_nonsquare;
 			update_viewer();
 			return 0;
 		case ID_BG_CUSTOM:

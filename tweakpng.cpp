@@ -1232,6 +1232,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdL
 	globals.timer_set=0;
 	globals.vborder=4;
 	globals.vsize=TWPNG_VS_FIT;
+	globals.viewer_correct_nonsquare=1;
 
 	InitCommonControls();
 
