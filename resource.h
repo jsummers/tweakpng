@@ -145,6 +145,7 @@
 #define ID_NEWSCAL                      40066
 #define ID_IMPORTICCPROF                40067
 #define ID_NEWVPAG                      40068
+#define ID_COPYIMAGE                    40069
 
 // Next default values for new objects
 // 

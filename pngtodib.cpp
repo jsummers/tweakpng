@@ -92,6 +92,7 @@ struct p2d_struct {
 	BITMAPINFOHEADER*  dib_header;
 	RGBQUAD*   dib_palette;
 	p2d_byte*  dib_bits;
+	size_t     dib_size;
 	int        res_x,res_y;
 	int        res_units;
 	int        res_valid;  // are res_x, res_y, res_units valid?
@@ -744,7 +745,6 @@ int p2d_run(P2D *p2d)
 	jmp_buf jbuf;
 	struct errstruct errinfo;
 	int interlace_type;
-	size_t dib_size;
 	size_t dib_palette_offs;
 	size_t dib_bits_offs;
 	size_t dib_bits_size;
@@ -989,9 +989,9 @@ int p2d_run(P2D *p2d)
 	dib_palette_offs = sizeof(BITMAPINFOHEADER);
 	dib_bits_offs = dib_palette_offs + 4*p2d->dib_palette_entries;
 	dib_bits_size = p2d->height*dib_bytesperrow;
-	dib_size = dib_bits_offs + dib_bits_size;
+	p2d->dib_size = dib_bits_offs + dib_bits_size;
 
-	p2d->dib_header = (LPBITMAPINFOHEADER)calloc(1,dib_size);
+	p2d->dib_header = (LPBITMAPINFOHEADER)calloc(1,p2d->dib_size);
 	if(!p2d->dib_header) { retval=PNGD_E_NOMEM; goto done; }
 
 	p2d->dib_palette = (RGBQUAD*)&((p2d_byte*)p2d->dib_header)[dib_palette_offs];
@@ -1163,6 +1163,11 @@ int p2d_get_dibbits(P2D *p2d, void **ppbits)
 {
 	*ppbits = p2d->dib_bits;
 	return 1;
+}
+
+size_t p2d_get_dib_size(P2D *p2d)
+{
+	return p2d->dib_size;
 }
 
 int p2d_get_density(P2D *p2d, int *pres_x, int *pres_y, int *pres_units)

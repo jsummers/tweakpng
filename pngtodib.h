@@ -29,6 +29,7 @@ int  p2d_get_dib(P2D *p2d, BITMAPINFOHEADER **ppdib);
 int  p2d_get_dibbits(P2D *p2d, void **ppbits);
 int  p2d_get_density(P2D *p2d, int *pres_x, int *pres_y, int *pres_units);
 int  p2d_get_bgcolor(P2D *p2d, p2d_byte *pr, p2d_byte *pg, p2d_byte *pb);
+size_t p2d_get_dib_size(P2D *p2d);
 void p2d_free_dib(BITMAPINFOHEADER *pdib);
 
 P2D* p2d_init(struct p2d_globals_struct *g);

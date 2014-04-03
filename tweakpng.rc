@@ -147,6 +147,10 @@ BEGIN
     BEGIN
         MENUITEM "&Close Viewer",               ID_CLOSE
     END
+    POPUP "&Edit"
+    BEGIN
+        MENUITEM "&Copy Image",                 ID_COPYIMAGE
+    END
     POPUP "&Options"
     BEGIN
         MENUITEM "&Gamma Correction",           ID_GAMMACORRECT

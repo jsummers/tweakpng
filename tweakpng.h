@@ -470,6 +470,7 @@ public:
 	static void GlobalInit();
 	static void GlobalDestroy();
 	void Close();
+	void CopyImage();
 	void Update(Png *png); // Set png==NULL to clear viewer.
 	void SetCurrentFileName(const TCHAR *fn);
 	void UpdateViewerWindowTitle();
@@ -477,6 +478,7 @@ public:
 
 private:
 	LPBITMAPINFOHEADER m_dib;
+	size_t m_dib_size;
 	void *m_bits;
 
 	int m_imghasbgcolor;

@@ -283,6 +283,7 @@ void Viewer::Update(Png *png1)
 		goto abort;
 	}
 	rv=p2d_get_dib(p2d,&m_dib);
+	m_dib_size = p2d_get_dib_size(p2d);
 	rv=p2d_get_dibbits(p2d, &m_bits);
 
 	m_adjwidth = m_dib->biWidth;
@@ -334,6 +335,44 @@ void Viewer::Close()
 	if(m_hwndViewer) {
 		DestroyWindow(m_hwndViewer);
 	}
+}
+
+// Copy the bitmap to the clipboard
+void Viewer::CopyImage()
+{
+	HANDLE cb_data_handle = NULL;
+	void *cb_data = NULL;
+	int opened_clipboard = 0;
+
+	if(!m_dib || !m_hwndViewer) return;
+
+	cb_data_handle = GlobalAlloc(GMEM_ZEROINIT|GMEM_MOVEABLE,m_dib_size);
+	if(!cb_data_handle) goto done;
+	cb_data = GlobalLock(cb_data_handle);
+	if(!cb_data) goto done;
+
+	CopyMemory(cb_data, (void*)m_dib, m_dib_size);
+	GlobalUnlock(cb_data_handle);
+	cb_data = NULL;
+
+	if(!OpenClipboard(m_hwndViewer)) {
+		goto done;
+	}
+	opened_clipboard = 1;
+
+	if(!EmptyClipboard()) {
+		goto done;
+	}
+
+	if(!SetClipboardData(CF_DIB, cb_data_handle)) {
+		goto done;
+	}
+	cb_data_handle = NULL;
+
+done:
+	if(opened_clipboard) CloseClipboard();
+	if(cb_data) GlobalUnlock(cb_data_handle);
+	if(cb_data_handle) GlobalFree(cb_data_handle);
 }
 
 // make sure scroll position is within acceptable limits
@@ -475,6 +514,7 @@ LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 		{
 			HMENU m;
 			m=(HMENU)wParam;
+			EnableMenuItem(m,ID_COPYIMAGE,MF_BYCOMMAND|(v->m_dib?MF_ENABLED:MF_GRAYED));
 			CheckMenuItem(m,ID_GAMMACORRECT,MF_BYCOMMAND|
 				(globals.use_gamma?MF_CHECKED:MF_UNCHECKED));
 			CheckMenuItem(m,ID_BG_CUSTOM,MF_BYCOMMAND|
@@ -571,6 +611,9 @@ LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 		case ID_CLOSE:
 			globals.autoopen_viewer=0;
 			DestroyWindow(hwnd);
+			return 0;
+		case ID_COPYIMAGE:
+			v->CopyImage();
 			return 0;
 		case ID_GAMMACORRECT:
 			globals.use_gamma = !globals.use_gamma;
