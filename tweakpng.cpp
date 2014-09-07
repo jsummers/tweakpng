@@ -3104,10 +3104,14 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
 		case ID_HELPCONTENTS:
 			SetCurrentDirectory(globals.home_dir);
-			if((int)ShellExecute(globals.hwndMain,_T("open"),_T("tweakpng.txt"),
+			if((int)ShellExecute(globals.hwndMain,_T("open"),_T("..\\tweakpng.txt"),
 				NULL,NULL,SW_SHOWNORMAL)<=32)
 			{
-				mesg(MSG_E,_T("Cannot display help file"));
+				if((int)ShellExecute(globals.hwndMain,_T("open"),_T("tweakpng.txt"),
+					NULL,NULL,SW_SHOWNORMAL)<=32)
+				{
+					mesg(MSG_E,_T("Cannot display help file"));
+				}
 			}
 			SetCurrentDirectory(globals.orig_dir);
 			return 0;
