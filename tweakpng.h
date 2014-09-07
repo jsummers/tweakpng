@@ -28,8 +28,8 @@
 #define SYM_RDQUO       "\""
 #endif
 
-#define TWEAKPNG_VER_STRING      _T("1.4.5")
-#define TWEAKPNG_COPYRIGHT_DATE  _T("1999") SYM_ENDASH _T("2012")
+#define TWEAKPNG_VER_STRING      _T("1.4.6")
+#define TWEAKPNG_COPYRIGHT_DATE  _T("1999") SYM_ENDASH _T("2014")
 #define TWEAKPNG_HOMEPAGE        _T("http://entropymine.com/jason/tweakpng/")
 
 #define ID_STBAR      19000
