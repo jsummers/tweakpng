@@ -967,6 +967,14 @@ int p2d_run(P2D *p2d)
 	}
 	else if(p2d->color_type==PNG_COLOR_TYPE_PALETTE) {
 		png_get_PLTE(p2d->png_ptr,p2d->info_ptr,&p2d->pngf_palette,&p2d->pngf_palette_entries);
+
+		if(p2d->pngf_palette_entries > (1<<p2d->pngf_bit_depth)) {
+			// libpng <= 1.6.18 does not sanitize oversized PLTE chunks.
+			// This way, we ignore any extra palette entries, instead of
+			// creating a DIB with an oversized palette.
+			p2d->pngf_palette_entries = 1<<p2d->pngf_bit_depth;
+		}
+
 		p2d->dib_palette_entries = p2d->pngf_palette_entries;
 		if(p2d->pngf_bit_depth==2)
 			dib_bpp=4;
