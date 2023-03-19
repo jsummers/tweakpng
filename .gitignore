@@ -1,10 +1,14 @@
 *.suo
 *.ncb
 *.user
+/tweakpng.aps
+/proj/vs2022/.vs
 /Debug
 /DebugU
 /Release
 /ReleaseU
+/Debug32
+/Release32
 /Debug64
 /DebugU64
 /Release64
