@@ -1,6 +1,6 @@
 TweakPNG:  A low-level PNG image file manipulation utility
-Version 1.4.6 - 2014-09-07
-Copyright (c) 1999-2014 Jason Summers  <jason1@pobox.com>
+Version 1.4.6+
+Copyright (c) 1999-2023 Jason Summers  <jason1@pobox.com>
 
 ==================== License ====================
 
@@ -23,7 +23,7 @@ A copy of the GNU General Public License is included in the file
 COPYING.txt.
 
 To get the latest version of TweakPNG, visit the TweakPNG home page at 
-<http://entropymine.com/jason/tweakpng/>.
+<https://entropymine.com/jason/tweakpng/>.
 
 
 ==================== Requirements ====================

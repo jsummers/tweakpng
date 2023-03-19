@@ -1,6 +1,6 @@
 TweakPNG:  A low-level PNG image file manipulation utility
-Version 1.4.6
-Copyright (c) 1999-2014 Jason Summers  <jason1@pobox.com>
+Version 1.4.6+
+Copyright (c) 1999-2023 Jason Summers  <jason1@pobox.com>
 
 ==================== License ====================
 
@@ -49,7 +49,7 @@ viewer.cpp
 
 
 To get the latest version of TweakPNG, visit the TweakPNG home page at 
-<http://entropymine.com/jason/tweakpng/>.
+<https://entropymine.com/jason/tweakpng/>.
 
 The source code should be compatible with Microsoft Visual C++ version 5 
 and higher. It might also work in other modern C++ packages.
