@@ -66,4 +66,9 @@
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="..\..\tweakpng.manifest">
+      <Filter>Resource Files</Filter>
+    </Manifest>
+  </ItemGroup>
 </Project>

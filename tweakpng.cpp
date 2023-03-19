@@ -18,6 +18,8 @@
 */
 
 // Try to use a less ancient version of comctl32.dll than the default.
+// This belongs in the .manifest file(s), but I can't figure out how to
+// get it to work.
 #ifdef _WIN64
 #pragma comment(linker, \
 	"\"/manifestdependency:type='Win32' "\
@@ -31,7 +33,7 @@
 	"\"/manifestdependency:type='Win32' "\
 	"name='Microsoft.Windows.Common-Controls' "\
 	"version='6.0.0.0' "\
-	"processorArchitecture='X86' "\
+	"processorArchitecture='x86' "\
 	"publicKeyToken='6595b64144ccf1df' "\
 	"language='*'\"")
 #endif
