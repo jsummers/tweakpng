@@ -10,6 +10,8 @@
 #define _WIN32_WINDOWS 0x0410
 #endif
 
+#include <SDKDDKVer.h>
+
 // Comment out the next line to compile without image viewing support.
 #define TWPNG_SUPPORT_VIEWER
 

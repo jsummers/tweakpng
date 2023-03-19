@@ -635,7 +635,7 @@ static int decode_strategy_palette(P2D *p2d)
 {
 	int i;
 	int retval=0;
-	png_bytep trans_alpha;
+	png_bytep trans_alpha = 0;
 	png_color_16p trans_color;
 	int num_trans;
 	struct p2d_color_fltpt_struct lcolor;

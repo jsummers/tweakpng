@@ -110,7 +110,7 @@ void mesg(int severity, const TCHAR *fmt, ...)
 {
 	va_list ap;
 	TCHAR buf[2048];
-	TCHAR *t;
+	const TCHAR *t;
 	int flags;
 
 	va_start(ap, fmt);
@@ -218,6 +218,7 @@ void Png::fill_listbox(HWND hwnd)
 {
 	int i;
 	int rv;
+	TCHAR textbuf[50];
 
 	LV_ITEM lvi;
 
@@ -226,11 +227,11 @@ void Png::fill_listbox(HWND hwnd)
 	ZeroMemory((void*)&lvi,sizeof(LV_ITEM));
 	lvi.mask= LVIF_TEXT    /* | LVIF_DI_SETITEM ? */;
 
-
+	StringCbCopy(textbuf, sizeof(textbuf), _T(""));
 	for(i=0;i<m_num_chunks;i++) {
 		lvi.iItem=i;
 		lvi.iSubItem=0;
-		lvi.pszText=_T("");  // start with blank; update_row() will set everything
+		lvi.pszText=textbuf;  // start with blank; update_row() will set everything
 		rv=ListView_InsertItem(hwnd,&lvi);
 
 		update_row(hwnd,i);
@@ -265,7 +266,7 @@ static void update_status_bar_and_viewer()
 {
 	TCHAR buf[100];
 	DWORD s;
-	TCHAR *type;
+	const TCHAR *type;
 
 	if(!globals.hwndStBar) { goto done; }
 	if(!png) {
@@ -1526,7 +1527,7 @@ done:
 // msgmode==1: if errors found, asks if you want to save, returns 0 if user says no, otherwise 1
 int Png::check_validity(int msgmode)
 {
-	TCHAR *m;
+	const TCHAR *m;
 	int i;
 	int e=0;   // error count
 	int t;
@@ -2458,6 +2459,7 @@ static int CreateMainWindows(HWND hwnd)
 	LV_COLUMN lvc;
 	RECT r;
 	DWORD style;
+	TCHAR textbuf[50];
 
 	globals.hwndStBar=CreateStatusWindow(WS_CHILD|WS_VISIBLE,_T(""),hwnd,ID_STBAR);
 	if(!globals.hwndStBar) {
@@ -2487,27 +2489,32 @@ static int CreateMainWindows(HWND hwnd)
     lvc.cchTextMax=0;
 	lvc.iSubItem=0;
 
-	lvc.pszText=_T("Chunk");
+	StringCbCopy(textbuf, sizeof(textbuf), _T("Chunk"));
+	lvc.pszText=textbuf;
 	lvc.cx= globals.window_prefs.column_width[0];
 	lvc.fmt= LVCFMT_LEFT;
 	ListView_InsertColumn(globals.hwndMainList,0,&lvc);
 
-	lvc.pszText=_T("Length");
+	StringCbCopy(textbuf, sizeof(textbuf), _T("Length"));
+	lvc.pszText=textbuf;
 	lvc.cx= globals.window_prefs.column_width[1];
 	lvc.fmt= LVCFMT_RIGHT;
 	ListView_InsertColumn(globals.hwndMainList,1,&lvc);
 
-	lvc.pszText=_T("CRC");
+	StringCbCopy(textbuf, sizeof(textbuf), _T("CRC"));
+	lvc.pszText=textbuf;
 	lvc.cx= globals.window_prefs.column_width[2];
 	lvc.fmt= LVCFMT_LEFT;
 	ListView_InsertColumn(globals.hwndMainList,2,&lvc);
 
-	lvc.pszText=_T("Attributes");
+	StringCbCopy(textbuf, sizeof(textbuf), _T("Attributes"));
+	lvc.pszText=textbuf;
 	lvc.cx= globals.window_prefs.column_width[3];
 	lvc.fmt= LVCFMT_LEFT;
 	ListView_InsertColumn(globals.hwndMainList,3,&lvc);
 
-	lvc.pszText=_T("Contents");
+	StringCbCopy(textbuf, sizeof(textbuf), _T("Contents"));
+	lvc.pszText=textbuf;
 	lvc.cx= globals.window_prefs.column_width[4];
 	lvc.fmt= LVCFMT_LEFT;
 	ListView_InsertColumn(globals.hwndMainList,4,&lvc);

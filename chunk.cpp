@@ -49,8 +49,8 @@ static INT_PTR CALLBACK DlgProcGetInt(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 
 struct get_int_ctx {
 	int value;   // initial value and final value
-	TCHAR *label;
-	TCHAR *title;  // window title
+	const TCHAR *label;
+	const TCHAR *title;  // window title
 };
 
 
@@ -95,7 +95,7 @@ struct edit_plte_ctx {
 
 typedef struct {
 	int id;
-	char *name;
+	const char *name;
 } chunk_id_struct_t;
 
 static const chunk_id_struct_t chunk_id_list[] = {
@@ -1466,7 +1466,7 @@ done:
 
 void Chunk::describe_sCAL(TCHAR *buf, int buflen)
 {
-	TCHAR *unitsstring;
+	const TCHAR *unitsstring;
 	struct sCAL_data d;
 
 	if(msg_if_invalid_length(buf,buflen,_T("physical scale of image subject"))) return;
