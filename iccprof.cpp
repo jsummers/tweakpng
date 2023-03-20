@@ -86,7 +86,7 @@ int ImportICCProfileByFilename(Png *png, const TCHAR *fn)
 	c->data=(unsigned char*)malloc(c->length);
 	if(!c->data) goto done;
 
-	memcpy(&c->data[0],prof_name,prof_name_len+1); // Profile name
+	memcpy(&c->data[0],prof_name,(size_t)prof_name_len+1); // Profile name
 	c->data[prof_name_len+1] = 0; // Compression method
 	memcpy(&c->data[prof_name_len+1+1],cmpr_prof_data,cmpr_prof_len);
 
@@ -402,7 +402,7 @@ static void twpng_dump_iccp_meas_flare(struct iccp_ctx_struct *ctx,
 	const TCHAR *s;
 	u = read_int32(d);
 	if(u==0) s=_T("0 (0%)");
-	else if(u=0x10000) s=_T("1.0 (or 100%)");
+	else if(u==0x10000) s=_T("1.0 (or 100%)");
 	else s=_T("unrecognized");
 	twpng_iccp_append_textf(ctx,_T("\tmeasurement flare: %u (%s)\r\n"),u,s);
 }

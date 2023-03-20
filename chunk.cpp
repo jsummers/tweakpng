@@ -354,7 +354,7 @@ static void lf2crlf(TCHAR **outdatap, TCHAR *indata, int len)
 		if(indata[i]=='\n') lfcount++;
 	}
 
-	outdata=(TCHAR*)malloc(sizeof(TCHAR)*(len+lfcount+1));
+	outdata=(TCHAR*)malloc(sizeof(TCHAR)*((size_t)len+(size_t)lfcount+1));
 	if(!outdata) return;
 
 	p=0;
@@ -595,7 +595,7 @@ int Chunk::edit_plte_info()
 			if(ch_plte->length != (unsigned int)(3*pal_info.numplte) ) {
 				// size of palette changed, need to reallocate
 				free(ch_plte->data);
-				ch_plte->data=(unsigned char*)malloc(3*pal_info.numplte);
+				ch_plte->data=(unsigned char*)malloc(3*(size_t)pal_info.numplte);
 				ch_plte->length=(unsigned int)(3*pal_info.numplte);
 			}
 			for(i=0;i<pal_info.numplte;i++) {
@@ -2240,7 +2240,7 @@ static void Dlg_tEXt_OK(HWND hwnd, Chunk *ch)
 
 	h=GetDlgItem(hwnd,IDC_TEXTTEXT);
 	len=GetWindowTextLength(h);
-	tmptext=(TCHAR*)malloc((sizeof(TCHAR))*(len+1));
+	tmptext=(TCHAR*)malloc((sizeof(TCHAR))*((size_t)len+1));
 	GetWindowText(h,tmptext,len+1);
 
 	crlf2lf(tmptext);

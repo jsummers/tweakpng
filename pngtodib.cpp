@@ -306,7 +306,7 @@ static int p2d_convert_2bit_to_4bit(P2D *p2d)
 	p2d_byte *tmprow;
 	int i,j;
 
-	tmprow = (p2d_byte*)malloc((p2d->width+3)/4 );
+	tmprow = (p2d_byte*)malloc(((size_t)p2d->width+3)/4 );
 	if(!tmprow) { return 0; }
 
 	for(j=0;j<(int)p2d->height;j++) {
@@ -495,7 +495,7 @@ static int decode_strategy_rgba(P2D *p2d)
 	p2d_byte a_int;
 	int k;
 
-	pngimage = (p2d_byte*)malloc(4*p2d->width*p2d->height);
+	pngimage = (p2d_byte*)malloc(4*(size_t)p2d->width*(size_t)p2d->height);
 	if(!pngimage) goto done;
 	pngrowpointers = (p2d_byte**)malloc(p2d->height*sizeof(p2d_byte*));
 	if(!pngrowpointers) goto done;
@@ -557,7 +557,7 @@ static int decode_strategy_graya(P2D *p2d, int tocolor)
 	int k;
 	p2d_byte a_int, gray_int;
 
-	pngimage = (p2d_byte*)malloc(2*p2d->width*p2d->height);
+	pngimage = (p2d_byte*)malloc(2*(size_t)p2d->width*(size_t)p2d->height);
 	if(!pngimage) goto done;
 	pngrowpointers = (p2d_byte**)malloc(p2d->height*sizeof(p2d_byte*));
 	if(!pngrowpointers) goto done;
@@ -995,8 +995,8 @@ int p2d_run(P2D *p2d)
 	dib_bytesperrow = (((p2d->width * dib_bpp)+31)/32)*4;
 
 	dib_palette_offs = sizeof(BITMAPINFOHEADER);
-	dib_bits_offs = dib_palette_offs + 4*p2d->dib_palette_entries;
-	dib_bits_size = p2d->height*dib_bytesperrow;
+	dib_bits_offs = dib_palette_offs + 4*(size_t)p2d->dib_palette_entries;
+	dib_bits_size = (size_t)p2d->height*(size_t)dib_bytesperrow;
 	p2d->dib_size = dib_bits_offs + dib_bits_size;
 
 	p2d->dib_header = (LPBITMAPINFOHEADER)calloc(1,p2d->dib_size);

@@ -38,7 +38,7 @@ int convert_tchar_to_latin1(const TCHAR *src, int srclen,
 	*pdst=NULL;
 	*pdstlen=0;
 
-	dst = (unsigned char*)malloc(srclen+1); // This memory won't all be used if there are surrogate pairs.
+	dst = (unsigned char*)malloc((size_t)srclen+1); // This memory won't all be used if there are surrogate pairs.
 	if(!dst) return 0;
 	dpos=0;
 	for(spos=0;spos<srclen;spos++) {
@@ -88,7 +88,7 @@ int convert_latin1_to_tchar(const char *src, int srclen,
 	int i;
 	*pdst=NULL;
 	*pdstlen=0;
-	dst=(TCHAR*)malloc(sizeof(TCHAR)*(srclen+1));
+	dst=(TCHAR*)malloc(sizeof(TCHAR)*((size_t)srclen+1));
 	if(!dst) return 0;
 	for(i=0;i<srclen;i++) {
 		dst[i] = ((unsigned char)src[i]);
@@ -140,14 +140,14 @@ int convert_utf8_to_utf16(const void *src, int srclen,
 {
 	WCHAR *dst;
 	int pending_char;
-	int utf8_more_bytes_expected;
+	int utf8_more_bytes_expected = 0;
 	unsigned char c;
 	int dstpos;
 	int i;
 	int memneeded;
 
 	memneeded = utf8_to_utf16_count_bytes(src,srclen);
-	dst = (WCHAR*)malloc(memneeded+10);
+	dst = (WCHAR*)malloc((size_t)memneeded+10);
 	if(!dst) return 0;
 	dstpos=0;
 
@@ -160,7 +160,7 @@ int convert_utf8_to_utf16(const void *src, int srclen,
 			utf8_more_bytes_expected = 0;
 			dst[dstpos++] = c;
 		}
-		else if(c>=0x80 && c<=0xbf) {
+		else if((c>=0x80 && c<=0xbf) && utf8_more_bytes_expected>0) {
 			// non-initial byte of a multi-byte utf8 character
 			pending_char = (pending_char<<6)|(c&0x3f);
 			utf8_more_bytes_expected--;
@@ -253,7 +253,7 @@ int convert_utf16_to_utf8(const WCHAR *src, int srclen,
 	int dpos;
 	int i;
 	int c;
-	int pending_char;
+	int pending_char = 0;
 	int codept;
 	int memneeded;
 
@@ -261,7 +261,7 @@ int convert_utf16_to_utf8(const WCHAR *src, int srclen,
 	*pdstlen=0;
 
 	memneeded = utf16_to_utf8_count_bytes(src,srclen);
-	dst = (unsigned char*)malloc(memneeded+10);
+	dst = (unsigned char*)malloc((size_t)memneeded+10);
 	
 	if(!dst) return 0;
 

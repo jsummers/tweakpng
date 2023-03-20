@@ -959,6 +959,7 @@ static int RegisterClasses()
 {
 	WNDCLASS  wc;
 
+	ZeroMemory((void*)&wc, sizeof(WNDCLASS));
 	wc.style = CS_DBLCLKS|CS_HREDRAW;
 	wc.lpfnWndProc = (WNDPROC)WndProcMain;
 	wc.cbClsExtra = 0;
@@ -1039,13 +1040,13 @@ static int SaveSettings()
 
 	for(i=0;i<TWPNG_NUMTOOLS;i++) {
 		StringCchPrintf(v,24,_T("tool%dn"),i);
-		r=RegSetValueEx(key,v,0,REG_SZ,(LPBYTE)globals.tools[i].name  ,sizeof(TCHAR)*(1+lstrlen(globals.tools[i].name)));
+		r=RegSetValueEx(key,v,0,REG_SZ,(LPBYTE)globals.tools[i].name  ,(DWORD)sizeof(TCHAR)*(1+lstrlen(globals.tools[i].name)));
 
 		StringCchPrintf(v,24,_T("tool%dc"),i);
-		r=RegSetValueEx(key,v,0,REG_SZ,(LPBYTE)globals.tools[i].cmd   ,sizeof(TCHAR)*(1+lstrlen(globals.tools[i].cmd)));
+		r=RegSetValueEx(key,v,0,REG_SZ,(LPBYTE)globals.tools[i].cmd   ,(DWORD)sizeof(TCHAR)*(1+lstrlen(globals.tools[i].cmd)));
 
 		StringCchPrintf(v,24,_T("tool%dp"),i);
-		r=RegSetValueEx(key,v,0,REG_SZ,(LPBYTE)globals.tools[i].params,sizeof(TCHAR)*(1+lstrlen(globals.tools[i].params)));
+		r=RegSetValueEx(key,v,0,REG_SZ,(LPBYTE)globals.tools[i].params,(DWORD)sizeof(TCHAR)*(1+lstrlen(globals.tools[i].params)));
 	}
 
 	r=RegSetValueEx(key,_T("deflate_lvl"),0,REG_DWORD,(LPBYTE)&globals.compression_level,sizeof(globals.compression_level));
@@ -1142,7 +1143,7 @@ static void ReadSettings()
 		r=RegQueryValueEx(key,v,NULL,NULL,(LPBYTE)globals.tools[i].cmd,&datasize);
 		globals.tools[i].cmd[MAX_TOOL_CMD-1]='\0';
 
-		StringCchPrintf(v,24,_T("tool%dp"),i); datasize= sizeof(TCHAR*)*(MAX_TOOL_PARAMS-1);
+		StringCchPrintf(v,24,_T("tool%dp"),i); datasize= sizeof(TCHAR)*(MAX_TOOL_PARAMS-1);
 		r=RegQueryValueEx(key,v,NULL,NULL,(LPBYTE)globals.tools[i].params,&datasize);
 		globals.tools[i].params[MAX_TOOL_PARAMS-1]='\0';
 	}
@@ -2487,6 +2488,7 @@ static int CreateMainWindows(HWND hwnd)
 	style=ListView_GetExtendedListViewStyle(globals.hwndMainList);
 	ListView_SetExtendedListViewStyle(globals.hwndMainList,style|LVS_EX_FULLROWSELECT);
 
+	ZeroMemory((void*)&lvc, sizeof(LV_COLUMN));
 	lvc.mask= LVCF_FMT | LVCF_TEXT | LVCF_WIDTH;
     lvc.cchTextMax=0;
 	lvc.iSubItem=0;
@@ -2647,7 +2649,8 @@ static void RunTool(int n)
 	TCHAR filt_infn[MAX_PATH+2];
 	TCHAR filt_outfn[MAX_PATH+2];
 	TCHAR parambuf[1000];
-	int h=0;
+	HINSTANCE hInst;
+	unsigned __int64 h;
 	int ret;
 	int paramstype;
 	const TCHAR *ext;
@@ -2740,16 +2743,18 @@ static void RunTool(int n)
 				StringCbCopy(parambuf,sizeof(parambuf),tmpname);
 			}
 
-			h=(int)ShellExecute(globals.hwndMain,_T("open"),globals.tools[n].cmd,parambuf,NULL,SW_SHOWNORMAL);
+			hInst = ShellExecute(globals.hwndMain,_T("open"),globals.tools[n].cmd,parambuf,NULL,SW_SHOWNORMAL);
+			h = (unsigned __int64)hInst;
 			if(h <= 32) {
-				mesg(MSG_E,_T("Cannot execute tool (error %d)"),h);
+				mesg(MSG_E,_T("Cannot execute tool (error %u)"), (unsigned int)h);
 			}
 		}
 		else {
 			// If no application name was given, use the default PNG opener.
-			h=(int)ShellExecute(globals.hwndMain,_T("open"),tmpname,NULL,NULL,SW_SHOWNORMAL);
+			hInst = ShellExecute(globals.hwndMain,_T("open"),tmpname,NULL,NULL,SW_SHOWNORMAL);
+			h = (unsigned __int64)hInst;
 			if(h <= 32) {
-				mesg(MSG_E,_T("Cannot execute tool (error %d)"),h);
+				mesg(MSG_E,_T("Cannot execute tool (error %u)"), (unsigned int)h);
 			}
 		}
 	}
@@ -3021,9 +3026,14 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 			EnableMenuItem(m,ID_COMBINEIDAT, MF_BYCOMMAND |
 				((sel>1)?MF_ENABLED:MF_GRAYED) );
 			
-			x= MF_BYCOMMAND | (png?MF_ENABLED:MF_GRAYED);
-			EnableMenuItem(m,ID_PASTE,MF_BYCOMMAND |
-				(IsClipboardFormatAvailable(globals.pngchunk_cf))?x:MF_GRAYED);
+			x= MF_BYCOMMAND;
+			if((png) && IsClipboardFormatAvailable(globals.pngchunk_cf)) {
+				x |= MF_ENABLED;
+			}
+			else {
+				x |= MF_GRAYED;
+			}
+			EnableMenuItem(m,ID_PASTE,x);
 
 			CheckMenuItem(m,ID_IMGVIEWER,MF_BYCOMMAND|
 				(g_viewer?MF_CHECKED:MF_UNCHECKED));
@@ -3113,10 +3123,10 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
 		case ID_HELPCONTENTS:
 			SetCurrentDirectory(globals.home_dir);
-			if((int)ShellExecute(globals.hwndMain,_T("open"),_T("..\\tweakpng.txt"),
+			if((unsigned __int64)ShellExecute(globals.hwndMain,_T("open"),_T("..\\tweakpng.txt"),
 				NULL,NULL,SW_SHOWNORMAL)<=32)
 			{
-				if((int)ShellExecute(globals.hwndMain,_T("open"),_T("tweakpng.txt"),
+				if((unsigned __int64)ShellExecute(globals.hwndMain,_T("open"),_T("tweakpng.txt"),
 					NULL,NULL,SW_SHOWNORMAL)<=32)
 				{
 					mesg(MSG_E,_T("Cannot display help file"));
@@ -3372,7 +3382,7 @@ static void add_to_explorer_menu()
 			rv=RegCreateKeyEx(HKEY_CURRENT_USER,buf1,0,NULL,
 				REG_OPTION_NON_VOLATILE,KEY_WRITE,NULL,&key1,&disp);
 			if(rv==ERROR_SUCCESS) {
-				RegSetValueEx(key1,_T(""),0,REG_SZ,(BYTE*)logicalname,sizeof(TCHAR)*(1+lstrlen(logicalname)));
+				RegSetValueEx(key1,_T(""),0,REG_SZ,(BYTE*)logicalname,(DWORD)sizeof(TCHAR)*(1+lstrlen(logicalname)));
 				RegCloseKey(key1);
 			}
 		}
@@ -3397,7 +3407,7 @@ static void add_to_explorer_menu()
 		if(rv==ERROR_SUCCESS) {
 			// The name on the menu:
 			StringCchCopy(buf,500,_T("TweakPNG"));
-			RegSetValueEx(key1,_T(""),0,REG_SZ,(BYTE*)buf,sizeof(TCHAR)*(1+lstrlen(buf)));
+			RegSetValueEx(key1,_T(""),0,REG_SZ,(BYTE*)buf,(DWORD)sizeof(TCHAR)*(1+lstrlen(buf)));
 			RegCloseKey(key1);
 		}
 
@@ -3407,7 +3417,7 @@ static void add_to_explorer_menu()
 		if(rv==ERROR_SUCCESS) {
 			GetModuleFileName(globals.hInst,buf,500);
 			StringCchPrintf(cmd,500,_T("\"%s\" \"%%1\""), buf);
-			RegSetValueEx(key1,_T(""),0,REG_SZ,(BYTE*)cmd,sizeof(TCHAR*)*(1+lstrlen(cmd)));
+			RegSetValueEx(key1,_T(""),0,REG_SZ,(BYTE*)cmd,(DWORD)sizeof(TCHAR*)*(1+lstrlen(cmd)));
 			RegCloseKey(key1);
 		}
 	}
