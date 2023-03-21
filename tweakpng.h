@@ -411,7 +411,7 @@ public:
 	void move_chunk(int,int);
 
 	void modified(); // only call if something really changed. also calls updatestbar
-	
+
 	void set_signature();
 	int check_validity(int msgmode);
 	void edit_chunk(int);
@@ -420,7 +420,7 @@ public:
 	void new_chunk(int chunktype_id);
 	Chunk *find_first_chunk(int chunktype_id, int *index);
 	DWORD get_file_size();
-	
+
 
 	int m_imgtype;
 	int m_num_chunks;

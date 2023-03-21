@@ -2,19 +2,19 @@
 //
 //
 /*
-    Copyright (C) 1999-2008 Jason Summers
+	Copyright (C) 1999-2008 Jason Summers
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    See the file tweakpng-src.txt for more information.
+	See the file tweakpng-src.txt for more information.
 */
 
 // Try to use a less ancient version of comctl32.dll than the default.
@@ -81,31 +81,31 @@ static int GetLVFocus(HWND hwnd);
 /* make the table for a fast crc */
 void make_crc_table()
 {
-  int n;
+	int n;
 
-  for (n = 0; n < 256; n++) {
-    DWORD c;
-    int k;
+	for (n = 0; n < 256; n++) {
+		DWORD c;
+		int k;
 
-    c = (DWORD)n;
-    for (k = 0; k < 8; k++)
-      c = c & 1 ? 0xedb88320L ^ (c >> 1):c >> 1;
+		c = (DWORD)n;
+		for (k = 0; k < 8; k++)
+		c = c & 1 ? 0xedb88320L ^ (c >> 1):c >> 1;
 
-    globals.crc_table[n] = c;
-  }
+		globals.crc_table[n] = c;
+	}
 }
 
 
 DWORD update_crc(DWORD crc, unsigned char *buf, int len)
 {
-  DWORD c = crc;
-  unsigned char *p = buf;
-  int n = len;
+	DWORD c = crc;
+	unsigned char *p = buf;
+	int n = len;
 
-  if (n > 0) do {
-    c = globals.crc_table[(c ^ (*p++)) & 0xff] ^ (c >> 8);
-  } while (--n);
-  return c;
+	if (n > 0) do {
+		c = globals.crc_table[(c ^ (*p++)) & 0xff] ^ (c >> 8);
+	} while (--n);
+	return c;
 }
 
 void mesg(int severity, const TCHAR *fmt, ...)
@@ -380,7 +380,7 @@ DWORD Png::stream_file_read(unsigned char *buf, DWORD bytes_requested)
 			m_stream_curpos_in_curchunk=0;
 			if(m_stream_curchunk>=m_num_chunks) goto done;
 		}
-	
+
 		nread = chunk[m_stream_curchunk]->copy_segment_to_memory(&buf[total_bytes_copied],
 			m_stream_curpos_in_curchunk, bytes_requested-total_bytes_copied);
 		m_stream_curpos_in_curchunk+=nread;
@@ -438,7 +438,7 @@ void Png::new_chunk(int newid)
 
 	// plte_pos will be -1 if no PLTE chunk exists
 	find_first_chunk(CHUNK_PLTE, &plte_pos);
-	
+
 	switch(newid) {
 	case CHUNK_tEXt:
 		pos=m_num_chunks-1;
@@ -683,7 +683,7 @@ int Png::write_file(const TCHAR *fn)
 }
 
 // make sure we have room for have n chunks in the chunk[] array
-void Png::init_new_chunk(int n)   
+void Png::init_new_chunk(int n)
 {
 	if(n<m_chunks_alloc) return;
 	// oops -- overran our chunks array. try to alloc a bigger one
@@ -1857,10 +1857,10 @@ static int GetLVFocus(HWND hwnd)
 		}
 	}
 	return 0;
-}	
+}
 
-/* returns the selected item if exactly one item is selected,
- * otherwise returns -1 */
+// returns the selected item if exactly one item is selected,
+// otherwise returns -1
 static int GetLVSelection(HWND hwnd)
 {
 	int i;
@@ -2095,7 +2095,7 @@ static void MoveChunkUp()
 			png->move_chunk(i,-1);
 		}
 	}
-		
+
 	png->fill_listbox(globals.hwndMainList);
 
 	for(i=png->m_num_chunks-1;i>=0;i--) {   // reselect moved chunks
@@ -2125,7 +2125,7 @@ static void MoveChunkDown()
 			png->move_chunk(i,1);
 		}
 	}
-		
+
 	png->fill_listbox(globals.hwndMainList);
 
 	for(i=0;i<png->m_num_chunks;i++) {   // reselect moved chunks
@@ -2211,7 +2211,7 @@ int Png::split_idat(int n, int ssize, int repeat)
 static void SplitIDAT()
 {
 	int n,id;
-	
+
 	n=GetLVSelection(globals.hwndMainList);
 	if(n<0) {
 		mesg(MSG_I,_T("Select a single IDAT chunk first"));
@@ -2490,7 +2490,7 @@ static int CreateMainWindows(HWND hwnd)
 
 	ZeroMemory((void*)&lvc, sizeof(LV_COLUMN));
 	lvc.mask= LVCF_FMT | LVCF_TEXT | LVCF_WIDTH;
-    lvc.cchTextMax=0;
+	lvc.cchTextMax=0;
 	lvc.iSubItem=0;
 
 	StringCbCopy(textbuf, sizeof(textbuf), _T("Chunk"));
@@ -2631,7 +2631,7 @@ static int twpng_RunFilter(struct tools_t_struct *t, const TCHAR *infn, const TC
 	si.cb = sizeof(STARTUPINFO);
 	b = CreateProcess(app,parambuf2,NULL,NULL,FALSE,0,NULL,NULL,&si,&pi);
 	if(b) {
-		ret = WaitForSingleObject(pi.hProcess,INFINITE); 
+		ret = WaitForSingleObject(pi.hProcess,INFINITE);
 		retval=1;
 	}
 
@@ -2894,7 +2894,7 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
 		// create the listview control, statusbar, etc.
 		if(!CreateMainWindows(hwnd)) return -1;  // abort program
-			
+
 		if(lstrlen(globals.file_from_cmdline)) {
 			OpenPngByName(globals.file_from_cmdline);
 		}
@@ -3025,7 +3025,7 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 
 			EnableMenuItem(m,ID_COMBINEIDAT, MF_BYCOMMAND |
 				((sel>1)?MF_ENABLED:MF_GRAYED) );
-			
+
 			x= MF_BYCOMMAND;
 			if((png) && IsClipboardFormatAvailable(globals.pngchunk_cf)) {
 				x |= MF_ENABLED;
@@ -3084,7 +3084,7 @@ static LRESULT CALLBACK WndProcMain(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 		case ID_OPEN:
 			if(OkToClosePNG()) OpenPngFromMenu(hwnd);
 			return 0;
-		case ID_NEW:   
+		case ID_NEW:
 			if(OkToClosePNG()) NewPng();
 			return 0;
 
@@ -3444,9 +3444,9 @@ static void remove_from_explorer_menu()
 }
 
 static const TCHAR *cmprlevel_names[] = { _T("Default compression"),
-      _T("0 = No compression"),
-	  _T("1 = Fastest"),_T("2"),_T("3"),_T("4"),_T("5"),_T("6"),_T("7"),_T("8"),
-	  _T("9 = Best compression"),NULL };
+	_T("0 = No compression"),
+	_T("1 = Fastest"),_T("2"),_T("3"),_T("4"),_T("5"),_T("6"),_T("7"),_T("8"),
+	_T("9 = Best compression"),NULL };
 
 static INT_PTR CALLBACK DlgProcPrefs(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {

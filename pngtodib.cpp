@@ -1,18 +1,18 @@
 // pngtodib.cpp - part of TweakPNG
 /*
-    Copyright (C) 2011 Jason Summers
+	Copyright (C) 2011 Jason Summers
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    See the file tweakpng-src.txt for more information.
+	See the file tweakpng-src.txt for more information.
 */
 
 #include "twpng-config.h"
@@ -163,7 +163,7 @@ static void my_png_warning_fn(png_structp png_ptr, const char *warn_msg)
 
 // A callback function used with custom I/O.
 static void my_png_read_fn_custom(png_structp png_ptr,
-      png_bytep data, png_size_t length)
+	png_bytep data, png_size_t length)
 {
 	struct p2d_struct *p2d;
 	int ret;
@@ -314,7 +314,7 @@ static int p2d_convert_2bit_to_4bit(P2D *p2d)
 		ZeroMemory(p2d->dib_row_pointers[j], (p2d->width+1)/2 );
 
 		for(i=0;i<(int)p2d->width;i++) {
-			p2d->dib_row_pointers[j][i/2] |= 
+			p2d->dib_row_pointers[j][i/2] |=
 				( ((tmprow[i/4] >> (2*(3-i%4)) ) & 0x03)<< (4*(1-i%2)) );
 		}
 	}
@@ -413,7 +413,7 @@ static int p2d_make_color_correction_tables(P2D *p2d)
 
 			// TODO: This is only needed if there is partial transparency.
 			p2d->src255_to_linear_table[n] = val_linear;
-			
+
 			val_dst = linear_to_srgb_sample(val_linear);
 			p2d->src255_to_srgb255_table[n] = (p2d_byte)(0.5+val_dst*255.0);
 		}
@@ -1165,7 +1165,7 @@ int p2d_get_dib(P2D *p2d, BITMAPINFOHEADER **ppdib)
 {
 	*ppdib = p2d->dib_header;
 	return 1;
-}	
+}
 
 int p2d_get_dibbits(P2D *p2d, void **ppbits)
 {

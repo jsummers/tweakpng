@@ -2,19 +2,19 @@
 //
 //
 /*
-    Copyright (C) 1999-2008 Jason Summers
+	Copyright (C) 1999-2008 Jason Summers
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    See the file tweakpng-src.txt for more information.
+	See the file tweakpng-src.txt for more information.
 */
 
 #include "twpng-config.h"
@@ -117,7 +117,7 @@ static const chunk_id_struct_t chunk_id_list[] = {
 	{CHUNK_iCCP,"iCCP"},
 	{CHUNK_iTXt,"iTXt"},
 	{CHUNK_sPLT,"sPLT"},
-              
+
 	{CHUNK_oFFs,"oFFs"},
 	{CHUNK_pCAL,"pCAL"},
 	{CHUNK_sCAL,"sCAL"},
@@ -136,7 +136,7 @@ static const chunk_id_struct_t chunk_id_list[] = {
 
 	{CHUNK_MHDR,"MHDR"},
 	{CHUNK_MEND,"MEND"},
-          
+
 	{CHUNK_LOOP,"LOOP"},
 	{CHUNK_ENDL,"ENDL"},
 	{CHUNK_DEFI,"DEFI"},
@@ -1093,7 +1093,7 @@ void Chunk::describe_PLTE(TCHAR *buf, int buflen)
 		StringCchCopy(buf,buflen,_T("palette (suggested)")); break;
 	case 0: case 4:
 		StringCchCopy(buf,buflen,_T("illegal palette chunk")); break;
-	default:	
+	default:
 		StringCchCopy(buf,buflen,_T("palette"));
 	}
 
@@ -1296,7 +1296,7 @@ void Chunk::describe_fcTL(TCHAR *buf, int buflen)
 	case 2: dispose_op = _T("prev"); break;
 	default: dispose_op = _T("?"); break;
 	}
-	
+
 	switch(data[25]) {
 	case 0: blend_op = _T("source"); break;
 	case 1: blend_op = _T("over"); break;
@@ -1878,7 +1878,7 @@ void Chunk::get_text_descr(TCHAR *buf, int buflen)
 	case CHUNK_IDAT: StringCchCopy(buf,buflen,_T("PNG image data")); break;
 
 	case CHUNK_sRGB: describe_sRGB(buf,buflen); break;
-	case CHUNK_iCCP: describe_keyword_chunk(buf,buflen,_T("embedded ICC profile")); break; 
+	case CHUNK_iCCP: describe_keyword_chunk(buf,buflen,_T("embedded ICC profile")); break;
 	case CHUNK_sPLT: describe_keyword_chunk(buf,buflen,_T("suggested palette")); break;
 	case CHUNK_sTER: describe_sTER(buf,buflen); break;
 
@@ -2071,7 +2071,7 @@ DWORD Chunk::copy_segment_to_memory(unsigned char *buf, DWORD offset, DWORD bufl
 			// writing the crc
 			if(     pos_in_chunk==length+8 ) buf[pos_in_buf]= (unsigned char) ((m_crc & 0xff000000)>>24);
 			else if(pos_in_chunk==length+9 ) buf[pos_in_buf]= (unsigned char) ((m_crc & 0x00ff0000)>>16);
-			else if(pos_in_chunk==length+10) buf[pos_in_buf]= (unsigned char) ((m_crc & 0x0000ff00)>> 8); 
+			else if(pos_in_chunk==length+10) buf[pos_in_buf]= (unsigned char) ((m_crc & 0x0000ff00)>> 8);
 			else if(pos_in_chunk==length+11) buf[pos_in_buf]= (unsigned char) ( m_crc & 0x000000ff     );
 		}
 		else {
@@ -2655,7 +2655,7 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 	case WM_DESTROY:
 		ch=NULL;
 		break;
-		
+
 	case WM_SIZE:
 		if(ch->m_chunktype_id==CHUNK_iCCP) {
 			ch->size_iCCP_dlg(p,hwnd);
@@ -2903,7 +2903,7 @@ INT_PTR CALLBACK Chunk::DlgProcEditChunk(HWND hwnd, UINT msg, WPARAM wParam, LPA
 			}
 			EndDialog(hwnd,1);
 			return 1;
-				
+
 		case IDCANCEL:
 			EndDialog(hwnd, 0);
 			return 1;
@@ -3294,8 +3294,8 @@ static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		SetWindowPos(GetDlgItem(hwnd,IDCANCEL),NULL,rd.right-p->border_buttonoffset,p->border_btn2y,0,0,SWP_NOSIZE|SWP_NOZORDER);
 
 		SetWindowPos(p->hwndEditPal,NULL,
-		p->color_left, p->color_top, 
-		rd.right-p->border_width-p->color_left, rd.bottom-p->color_top-p->border_height,
+			p->color_left, p->color_top,
+			rd.right-p->border_width-p->color_left, rd.bottom-p->color_top-p->border_height,
 			SWP_NOMOVE|SWP_NOZORDER);
 		return 1;
 

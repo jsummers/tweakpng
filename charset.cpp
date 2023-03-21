@@ -1,18 +1,18 @@
 // charset.cpp - part of TweakPNG
 /*
-    Copyright (C) 2008 Jason Summers
+	Copyright (C) 2008 Jason Summers
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    See the file tweakpng-src.txt for more information.
+	See the file tweakpng-src.txt for more information.
 */
 
 // Note: I am aware of the WideCharToMultiByte and MultiByteToWideChar Windows
@@ -262,7 +262,7 @@ int convert_utf16_to_utf8(const WCHAR *src, int srclen,
 
 	memneeded = utf16_to_utf8_count_bytes(src,srclen);
 	dst = (unsigned char*)malloc((size_t)memneeded+10);
-	
+
 	if(!dst) return 0;
 
 	dpos=0;

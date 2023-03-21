@@ -1,18 +1,18 @@
 // viewer.cpp - part of TweakPNG
 /*
-    Copyright (C) 1999-2011 Jason Summers
+	Copyright (C) 1999-2011 Jason Summers
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    See the file tweakpng-src.txt for more information.
+	See the file tweakpng-src.txt for more information.
 */
 
 #include "twpng-config.h"
@@ -489,7 +489,7 @@ LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 					FillRect(hdc,&v->m_clientrect,GetSysColorBrush(COLOR_WINDOW));
 				}
 				else {
-					
+
 					if(globals.window_bgcolor==TWPNG_WBG_SAMEASIMAGE && v->m_imghasbgcolor)
 						hbr1 = CreateSolidBrush(v->m_imgbgcolor);
 					else
@@ -554,7 +554,7 @@ LRESULT CALLBACK Viewer::WndProcViewer(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 		g_viewer=NULL;
 		SetFocus(globals.hwndMain);
 		return 0;
-		
+
 	case WM_SIZE:
 		GetClientRect(hwnd,&v->m_clientrect);
 		if(globals.vsize==TWPNG_VS_FIT) v->CalcStretchedSize();

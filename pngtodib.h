@@ -4,7 +4,7 @@
 // error codes returned by p2d_run()
 
 #define PNGD_E_SUCCESS   0
-#define PNGD_E_ERROR     1   // unspecified error 
+#define PNGD_E_ERROR     1   // unspecified error
 #define PNGD_E_NOMEM     3   // could not alloc memory
 #define PNGD_E_LIBPNG    5   // libpng error (corrupt PNG?)
 #define PNGD_E_BADPNG    7   // corrupt or unsupported PNG
