@@ -859,29 +859,33 @@ int Png::read_next_chunk(HANDLE fh, DWORD *filepos)
 	return 1;
 }
 
-Png::Png()
+void Png::initialize()
 {
+	m_valid = 0;
 	m_num_chunks=0;
 	chunk=NULL;
 	m_chunks_alloc=0;
 	StringCchCopy(m_filename,MAX_PATH,_T("untitled"));
 	m_named=0;
 	m_dirty=0;
-
-	chunk=(Chunk**)malloc(200*sizeof(Chunk*));
-	m_chunks_alloc=200;
 	m_imgtype=IMG_PNG;
-
+	m_pngfilesize = 0;
 	m_width=1;
 	m_height=1;
 	m_bitdepth=1;
 	m_colortype=0;
-	//m_compression=0;
-	//m_compressionfilter=0;
-	//m_interlace=0;
-
+	m_stream_phase = 0;
+	m_stream_curchunk = 0;
+	m_stream_curpos_in_curchunk = 0;
 	memcpy(signature,sig_png,8);
 
+	chunk=(Chunk**)malloc(200*sizeof(Chunk*));
+	m_chunks_alloc=200;
+}
+
+Png::Png()
+{
+	initialize();
 	m_valid=1;
 }
 
@@ -895,17 +899,12 @@ Png::Png(const TCHAR *load_fn, const TCHAR *save_fn)
 	HANDLE fh;
 	DWORD filepos;
 
+	initialize();
 	m_valid=0;
 
-	m_num_chunks=0;
-	chunk=NULL;
-	m_chunks_alloc=0;
 	StringCchCopy(m_filename,MAX_PATH,save_fn);
 	m_named=1;
 	m_dirty=0;
-
-	chunk=(Chunk**)malloc(200*sizeof(Chunk*));
-	m_chunks_alloc=200;
 
 	m_colortype=255;  // random invalid value
 
@@ -943,13 +942,15 @@ Png::~Png()
 {
 	int i;
 
-	// free individual chunks
-	for(i=0;i<m_num_chunks;i++) {
-		if(chunk[i]) delete chunk[i];
-	}
+	if(chunk) {
+		// free individual chunks
+		for(i=0;i<m_num_chunks;i++) {
+			if(chunk[i]) delete chunk[i];
+		}
 
-	// free chunk list
-	if(chunk) free(chunk);
+		// free chunk list
+		free(chunk);
+	}
 }
 
 
@@ -3727,4 +3728,3 @@ static INT_PTR CALLBACK DlgProcTools(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 	}
 	return 0;
 }
-

@@ -73,8 +73,23 @@ Viewer::Viewer(HWND parent, const TCHAR *current_filename)
 
 	m_hwndViewer=NULL;
 	m_dib = NULL;
+	m_dib_size = 0;
 	m_bits = NULL;
 	m_errorflag=0;
+	m_adjwidth = 0;
+	m_adjheight = 0;
+	m_dragging = 0;
+	m_dragstart_x = 0;
+	m_dragstart_y = 0;
+	m_errormsg[0] = '\0';
+	m_filename_base[0] = '\0';
+	m_imghasbgcolor = 0;
+	m_imgbgcolor = 0;
+	m_stretchedwidth = 0;
+	m_stretchedheight = 0;
+	m_imgpos_x = 0;
+	m_imgpos_y = 0;
+	ZeroMemory(&m_clientrect, sizeof(m_clientrect));
 
 	styles = WS_OVERLAPPEDWINDOW;
 	styles &= ~WS_MINIMIZEBOX;
@@ -238,6 +253,7 @@ void Viewer::Update(Png *png1)
 	int cursor_flag=0;
 	struct viewer_read_ctx read_ctx;
 
+	ZeroMemory(&read_ctx, sizeof(read_ctx));
 	m_errorflag=0;
 	FreeImage();
 

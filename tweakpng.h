@@ -431,11 +431,6 @@ public:
 	DWORD m_height;
 	unsigned char m_bitdepth;
 	unsigned char m_colortype;
-	//unsigned char m_compression;
-	//unsigned char m_compressionfilter;
-	//unsigned char m_interlace;
-
-	int create_display_window();
 
 	Chunk **chunk;
 
@@ -444,6 +439,8 @@ public:
 	int m_dirty; // has file been modified?
 
 private:
+	void initialize();
+
 	int m_chunks_alloc;    /* alloc'd length of the chunk array */
 
 	int m_stream_phase; // 0=reading file signature, 1=reading chunks
@@ -459,7 +456,6 @@ private:
 
 	int read_signature(HANDLE fh);
 	int read_next_chunk(HANDLE fh, DWORD *filepos);
-
 };
 
 

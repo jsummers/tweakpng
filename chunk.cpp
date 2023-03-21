@@ -2085,6 +2085,14 @@ DWORD Chunk::copy_segment_to_memory(unsigned char *buf, DWORD offset, DWORD bufl
 Chunk::Chunk()
 {
 	data=NULL;
+	length = 0;
+	m_crc = 0;
+	ZeroMemory(m_chunktype_ascii, sizeof(m_chunktype_ascii));
+	ZeroMemory(m_chunktype_tchar, sizeof(m_chunktype_tchar));
+	m_chunktype_id = 0;
+	m_parentpng = NULL;
+	m_index = 0;
+	m_flag = 0;
 
 	m_text_info.processed=0;
 	m_text_info.is_compressed=0;
