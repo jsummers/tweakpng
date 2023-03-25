@@ -70,6 +70,9 @@
 // v1.4
 #define CHUNK_dSIG  20
 
+// etc.
+#define CHUNK_eXIf  21
+
 // MNG-specific chunks
 #define CHUNK_MHDR 200
 #define CHUNK_LOOP 201
@@ -113,6 +116,7 @@
 // Other known private chunks
 #define CHUNK_CgBI 310
 #define CHUNK_vpAg 311
+#define CHUNK_iDOT 312
 
 // registered PNG extensions:
 #define CHUNK_oFFs  501

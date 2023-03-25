@@ -128,11 +128,13 @@ static const chunk_id_struct_t chunk_id_list[] = {
 
 	{CHUNK_sTER,"sTER"},
 	{CHUNK_dSIG,"dSIG"},
+	{CHUNK_eXIf,"eXIf"},
 	{CHUNK_acTL,"acTL"},
 	{CHUNK_fcTL,"fcTL"},
 	{CHUNK_fdAT,"fdAT"},
 	{CHUNK_CgBI,"CgBI"},
 	{CHUNK_vpAg,"vpAg"},
+	{CHUNK_iDOT,"iDOT"},
 
 	{CHUNK_MHDR,"MHDR"},
 	{CHUNK_MEND,"MEND"},
@@ -1890,6 +1892,7 @@ void Chunk::get_text_descr(TCHAR *buf, int buflen)
 	case CHUNK_gIFt: StringCchCopy(buf,buflen,_T("GIF plain text extension [DEPRECATED]")); break;
 	case CHUNK_fRAc: StringCchCopy(buf,buflen,_T("parameters for fractal image")); break;
 	case CHUNK_dSIG: StringCchCopy(buf,buflen,_T("digital signature data")); break;
+	case CHUNK_eXIf: StringCchCopy(buf,buflen,_T("Exif metadata")); break;
 
 	case CHUNK_MHDR: describe_MHDR(buf,buflen); break;
 	case CHUNK_MEND: StringCchCopy(buf,buflen,_T("end-of-file marker")); break;
@@ -1929,6 +1932,7 @@ void Chunk::get_text_descr(TCHAR *buf, int buflen)
 	case CHUNK_fdAT: describe_fdAT(buf,buflen); break;
 	case CHUNK_CgBI: StringCchCopy(buf,buflen,_T("iPhone PNG-like file header")); break;
 	case CHUNK_vpAg: describe_vpAg(buf,buflen); break;
+	case CHUNK_iDOT: StringCchCopy(buf,buflen,_T("Apple private data")); break;
 
 	default:
 		if(!is_public()) {
