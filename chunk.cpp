@@ -2184,6 +2184,9 @@ static int Dlg_tEXt_InitDialog(HWND hwnd, Chunk *ch, struct textdlgmetrics *tdm)
 	}
 	SendDlgItemMessage(hwnd,IDC_TEXTKEYWORD,CB_LIMITTEXT,79,0);
 
+#define TWPNG_EDIT_TEXT_MAX_CHARS 0x10000000
+	SendDlgItemMessage(hwnd, IDC_TEXTTEXT, EM_LIMITTEXT, TWPNG_EDIT_TEXT_MAX_CHARS, 0);
+
 	rv=ch->get_text_info();
 	if(rv) {
 		SetDlgItemText(hwnd,IDC_TEXTKEYWORD,ch->m_text_info.keyword);
