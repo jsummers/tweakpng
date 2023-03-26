@@ -1904,10 +1904,12 @@ static int GetLVSelection(HWND hwnd)
 
 static void PasteChunks()
 {
-	DWORD msize=0;
-	HGLOBAL hClip;
+	size_t msize_padded;
+	size_t msize=0;
+	HGLOBAL hClip = NULL;
 	unsigned char* lpClip;
-	DWORD p;
+	size_t p;
+	bool need_unlock = false;
 	int r,inspos1,inspos,numnewchunks;
 
 	inspos1=inspos=GetLVFocus(globals.hwndMainList);
@@ -1917,27 +1919,37 @@ static void PasteChunks()
 
 	OpenClipboard(NULL);
 	hClip=GetClipboardData(globals.pngchunk_cf);
-	if(hClip) {
-		lpClip= (unsigned char*)GlobalLock(hClip);
-		if(lpClip) {
-			//msize=GlobalSize(hClip);
-			msize=read_int32(&lpClip[0]);
-			p=4;
-			while(p<msize) {
-				png->insert_chunks(inspos,1,1);  // this is wrong, I should make a new chunk, then insert it if things go okay
-				r= png->chunk[inspos]->init_from_memory(&lpClip[p], msize-p);
-				if(!r) break;  // error occurred
-				inspos++;
-				numnewchunks++;
-				p+=r;
-			}
-			GlobalUnlock(hClip);
-			png->fill_listbox(globals.hwndMainList);
+	if(!hClip) goto done;
 
-			// reselect the new or changed chunks
-			twpng_SetLVSelection(globals.hwndMainList,inspos1,numnewchunks);
-			png->modified();
-		}
+	lpClip= (unsigned char*)GlobalLock(hClip);
+	if(!lpClip) goto done;
+	need_unlock = true;
+
+	msize_padded = GlobalSize(hClip);
+	if(msize_padded<4) goto done;
+	msize = (size_t)read_int32(&lpClip[0]);
+	if(msize>msize_padded) goto done;
+	p=4;
+	while(p<msize) {
+		png->insert_chunks(inspos,1,1);  // this is wrong, I should make a new chunk, then insert it if things go okay
+		r= png->chunk[inspos]->init_from_memory(&lpClip[p], (int)(msize-p));
+		if(!r) break;  // error occurred
+		inspos++;
+		numnewchunks++;
+		p+=r;
+	}
+	GlobalUnlock(hClip);
+	need_unlock = false;
+	png->fill_listbox(globals.hwndMainList);
+
+	// reselect the new or changed chunks
+	twpng_SetLVSelection(globals.hwndMainList,inspos1,numnewchunks);
+	png->modified();
+
+done:
+	if(hClip) {
+		if(need_unlock) GlobalUnlock(hClip);
+
 	}
 	CloseClipboard();
 }
@@ -1961,7 +1973,15 @@ static int CopyChunks()
 	msize+=4;
 
 	hClip=GlobalAlloc(GMEM_MOVEABLE|GMEM_DDESHARE,msize);
+	if(!hClip) {
+		return 0;
+	}
+
 	lpClip= (unsigned char*)GlobalLock(hClip);
+	if(!lpClip) {
+		GlobalFree(hClip);
+		return 0;
+	}
 
 	// I don't know how to figure out the size of the clipboard data
 	// when retrieving it. Am I just stupid?
