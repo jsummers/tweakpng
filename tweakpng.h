@@ -456,7 +456,7 @@ private:
 
 	unsigned char signature[8];
 
-	void init_new_chunk(int);
+	void ensure_chunks_alloc(int);
 
 	int read_signature(HANDLE fh);
 	int read_next_chunk(HANDLE fh, DWORD *filepos);

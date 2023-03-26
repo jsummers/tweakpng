@@ -397,7 +397,7 @@ void Png::insert_chunks(int pos, int num, int init)
 {
 	int i;
 
-	init_new_chunk(m_num_chunks+num);
+	ensure_chunks_alloc(m_num_chunks+num);
 
 	for(i=m_num_chunks+num-1;i>=(pos+num);i--) {
 		chunk[i] = chunk[i-num];
@@ -682,17 +682,44 @@ int Png::write_file(const TCHAR *fn)
 	return 1;
 }
 
-// make sure we have room for have n chunks in the chunk[] array
-void Png::init_new_chunk(int n)
+#define TWPNG_MAX_CHUNKS 1024000
+
+static void on_oom(void)
 {
-	if(n<m_chunks_alloc) return;
+	throw "Out of memory";
+}
+
+// make sure we have room for have n chunks in the chunk[] array
+void Png::ensure_chunks_alloc(int n)
+{
+	Chunk **new_chunk_arr;
+	size_t new_numalloc;
+
+	if(n<=m_chunks_alloc) return;
+
 	// oops -- overran our chunks array. try to alloc a bigger one
-	m_chunks_alloc += 200;
-	chunk=(Chunk**)realloc((void*)chunk, m_chunks_alloc*sizeof(Chunk*));
-	if(!chunk) {
+	if(m_chunks_alloc<200) {
+		new_numalloc = 200;
+	}
+	else {
+		new_numalloc = m_chunks_alloc*2;
+	}
+
+	if(new_numalloc > TWPNG_MAX_CHUNKS) {
+		on_oom();
+		return;
+	}
+
+	new_chunk_arr = (Chunk**)realloc((void*)chunk, new_numalloc*sizeof(Chunk*));
+	if(!new_chunk_arr) {
 		mesg(MSG_S,_T("can") SYM_RSQUO _T("t alloc memory for chunks array"));
 		m_num_chunks=0;
+		on_oom();
+		return;
 	}
+
+	chunk = new_chunk_arr;
+	m_chunks_alloc = (int)new_numalloc;
 }
 
 void Png::delete_chunk(int n)
@@ -850,7 +877,7 @@ int Png::read_next_chunk(HANDLE fh, DWORD *filepos)
 		c->m_crc=ccrc;  // correct it
 	}
 
-	init_new_chunk(m_num_chunks);  // make sure chunks array is large enough
+	ensure_chunks_alloc(m_num_chunks+1);  // make sure chunks array is large enough
 	chunk[m_num_chunks++]=c;
 
 	c->after_init();
@@ -879,8 +906,7 @@ void Png::initialize()
 	m_stream_curpos_in_curchunk = 0;
 	memcpy(signature,sig_png,8);
 
-	chunk=(Chunk**)malloc(200*sizeof(Chunk*));
-	m_chunks_alloc=200;
+	ensure_chunks_alloc(200);
 }
 
 Png::Png()
