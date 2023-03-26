@@ -57,6 +57,7 @@ int ImportICCProfileByFilename(Png *png, const TCHAR *fn)
 	DWORD bytesread = 0;
 	const char *prof_name = "ICC profile";
 	int prof_name_len = 11;
+	int ret;
 
 	if(!png) goto done;
 
@@ -72,8 +73,11 @@ int ImportICCProfileByFilename(Png *png, const TCHAR *fn)
 	unc_prof_data = (unsigned char*)malloc(unc_prof_len);
 	if(!unc_prof_data) goto done;
 
-	ReadFile(fh,(LPVOID)unc_prof_data,unc_prof_len,&bytesread,NULL);
+	ret = ReadFile(fh,(LPVOID)unc_prof_data,unc_prof_len,&bytesread,NULL);
 	CloseHandle(fh);
+	if(!ret || bytesread!=unc_prof_len) {
+		goto done;
+	}
 
 	cmpr_prof_len = twpng_compress_data(&cmpr_prof_data, unc_prof_data, unc_prof_len);
 	if(cmpr_prof_len==0 || !cmpr_prof_data) goto done;

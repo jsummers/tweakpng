@@ -181,24 +181,28 @@ int Chunk::is_safe_to_copy()  { return (m_chunktype_ascii[3]&0x20)?1:0; }
 static DWORD get_uncompressed_size(unsigned char *datain, int inlen,
 	int *perrflag, TCHAR *errmsg, int errmsglen)
 {
-	unsigned char dbuf[16384];
+#define GETUCSIZE_BUFLEN 16384
+	unsigned char *dbuf = NULL;
 	int data_read=0;
 	int err;
-
+	DWORD retval = 0;
+	bool need_inflateend = false;
 	z_stream z;
 
 	*perrflag = 0;
 	ZeroMemory((void*)&z,sizeof(z_stream));
+	dbuf = new unsigned char[GETUCSIZE_BUFLEN];
 
 	z.opaque=0;
 	z.next_in = datain;
 	z.avail_in = inlen;
 
 	inflateInit(&z);
+	need_inflateend = true;
 
 	while(1) {
 		z.next_out = dbuf;
-		z.avail_out = sizeof(dbuf);
+		z.avail_out = GETUCSIZE_BUFLEN;
 		err = inflate(&z, Z_NO_FLUSH);
 		if(err == Z_STREAM_END) break;
 		if(err != Z_OK) {
@@ -210,12 +214,21 @@ static DWORD get_uncompressed_size(unsigned char *datain, int inlen,
 				StringCchPrintf(errmsg,errmsglen,"%s",z.msg);
 #endif
 			}
-			inflateEnd(&z);
-			return 0;
+			retval = 0;
+			goto done;
 		}
 	}
-	inflateEnd(&z);
-	return z.total_out;
+
+	retval = (DWORD)z.total_out;
+
+done:
+	if(need_inflateend) {
+		inflateEnd(&z);
+	}
+	if(dbuf) {
+		delete[] dbuf;
+	}
+	return retval;
 }
 
 
@@ -1739,7 +1752,7 @@ int Chunk::get_text_info()
 #endif
 		}
 		else {
-			m_text_info.text= (TCHAR*)malloc( sizeof(TCHAR)*(length-p+1) );
+			m_text_info.text= (TCHAR*)malloc( sizeof(TCHAR)*((size_t)length-(size_t)p+1) );
 			if(!m_text_info.text) {
 				mesg(MSG_S,_T("can") SYM_RSQUO _T("t alloc memory"));
 				return 0;
@@ -2255,7 +2268,7 @@ static void Dlg_tEXt_OK(HWND hwnd, Chunk *ch)
 
 	h=GetDlgItem(hwnd,IDC_TEXTTEXT);
 	len=GetWindowTextLength(h);
-	tmptext=(TCHAR*)malloc((sizeof(TCHAR))*((size_t)len+1));
+	tmptext = new TCHAR[(size_t)len+1];
 	GetWindowText(h,tmptext,len+1);
 
 	crlf2lf(tmptext);
@@ -2279,7 +2292,8 @@ static void Dlg_tEXt_OK(HWND hwnd, Chunk *ch)
 	else {
 		ch->set_text_info(keyword,NULL,NULL,tmptext,is_cmpr,0);
 	}
-	free(tmptext);
+
+	delete[] tmptext;
 }
 
 // The text editor is so different from the other chunk editors that I'll

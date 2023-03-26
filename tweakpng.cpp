@@ -702,7 +702,7 @@ void Png::ensure_chunks_alloc(int n)
 		new_numalloc = 200;
 	}
 	else {
-		new_numalloc = m_chunks_alloc*2;
+		new_numalloc = (size_t)m_chunks_alloc*2;
 	}
 
 	if(new_numalloc > TWPNG_MAX_CHUNKS) {
@@ -1583,7 +1583,7 @@ int Png::check_validity(int msgmode)
 	i=0;
 	prev_chunk=CHUNK_UNKNOWN;
 
-	while(i<m_num_chunks && !e) {
+	while(i<m_num_chunks && e==0) {
 		t=chunk[i]->m_chunktype_id;   // to save typing
 
 		if(chunk[i]->is_critical() && t!=CHUNK_IHDR && t!=CHUNK_PLTE
@@ -1725,7 +1725,7 @@ int Png::check_validity(int msgmode)
 		i++;
 	}
 
-	if(!e) {  // if no errors yet, we'll test some more things
+	if(e==0) {  // if no errors yet, we'll test some more things
 		if(m_num_chunks<1) {
 			e++; m=_T("No chunks. Not valid.");
 		}
@@ -1743,7 +1743,7 @@ int Png::check_validity(int msgmode)
 done:
 	if(msgmode==0) {
 		MessageBox(globals.hwndMain,m,_T("Validity check"),MB_OK|(e?MB_ICONWARNING:MB_ICONINFORMATION));
-		return (!e);
+		return (e==0);
 	}
 	//else
 
@@ -2028,11 +2028,11 @@ static void ImportChunkByFilename(const TCHAR *fn, int pos)
 
 	c=new Chunk;
 	c->length=GetFileSize(fh,NULL)-4;
-	ReadFile(fh,(LPVOID)c->m_chunktype_ascii,4,&n,NULL);
+	(void)ReadFile(fh,(LPVOID)c->m_chunktype_ascii,4,&n,NULL);
 	c->m_chunktype_ascii[4]='\0';
 	c->set_chunktype_tchar_from_ascii();
 	c->data=(unsigned char*)malloc(c->length);
-	ReadFile(fh,(LPVOID)c->data,c->length,&n,NULL);
+	(void)ReadFile(fh,(LPVOID)c->data,c->length,&n,NULL);
 	CloseHandle(fh);
 
 	c->m_parentpng=png;

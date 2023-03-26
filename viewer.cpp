@@ -294,7 +294,7 @@ void Viewer::Update(Png *png1)
 
 	rv=p2d_run(p2d);
 	if(rv!=PNGD_E_SUCCESS) {
-		lstrcpyn(m_errormsg,p2d_get_error_msg(p2d),200);
+		StringCchCopy(m_errormsg, 200, p2d_get_error_msg(p2d));
 		m_errorflag=1;
 		goto abort;
 	}
