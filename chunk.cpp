@@ -335,6 +335,7 @@ int choose_color_dialog(HWND hwnd, unsigned char *redp,
 {
 	CHOOSECOLOR cc;
 
+	ZeroMemory(&cc, sizeof(CHOOSECOLOR));
 	cc.lStructSize=sizeof(CHOOSECOLOR);
 	cc.hwndOwner=hwnd;
 	cc.hInstance=NULL;
@@ -2029,6 +2030,7 @@ int Chunk::write_to_file(HANDLE fh, int exp)
 	unsigned char buf[8];
 	DWORD written;
 
+	ZeroMemory(buf, sizeof(buf));
 	if(!exp) {
 		// write length
 		write_int32(&buf[0],length);
@@ -2166,7 +2168,7 @@ void GetPosInParent(HWND hwnd,RECT *rc)
 {
 	POINT p;
 
-	p.x= p.y= 0;
+	ZeroMemory(&p, sizeof(POINT));
 	ClientToScreen(GetParent(hwnd),&p);
 	GetWindowRect(hwnd,rc);
 	rc->left -= p.x;
@@ -2262,8 +2264,11 @@ static void Dlg_tEXt_OK(HWND hwnd, Chunk *ch)
 	int is_international;
 	int is_cmpr;
 
-	is_cmpr = (IsDlgButtonChecked(hwnd,IDC_TEXTCOMPRESSED)==BST_CHECKED);
+	ZeroMemory(keyword, sizeof(keyword));
+	ZeroMemory(language, sizeof(language));
+	ZeroMemory(trnsl_keyword, sizeof(trnsl_keyword));
 
+	is_cmpr = (IsDlgButtonChecked(hwnd,IDC_TEXTCOMPRESSED)==BST_CHECKED);
 	is_international = (IsDlgButtonChecked(hwnd,IDC_TEXTUNICODE)==BST_CHECKED);
 
 	h=GetDlgItem(hwnd,IDC_TEXTTEXT);
@@ -2276,8 +2281,6 @@ static void Dlg_tEXt_OK(HWND hwnd, Chunk *ch)
 	GetDlgItemText(hwnd,IDC_TEXTKEYWORD,keyword,80);
 	keyword[79]='\0';
 
-	language[0]='\0';
-	trnsl_keyword[0]='\0';
 	if(is_international) {
 		// fixme: set a max length for these items
 		GetDlgItemText(hwnd,IDC_TEXTLANGUAGE,language,80);
@@ -2438,6 +2441,8 @@ void Chunk::init_sCAL_dlg(HWND hwnd)
 void Chunk::process_sCAL_dlg(HWND hwnd)
 {
 	struct sCAL_data d;
+
+	ZeroMemory(&d, sizeof(struct sCAL_data));
 	d.units=0;
 	if(IsDlgButtonChecked(hwnd,IDC_RADIO0)==BST_CHECKED) d.units=1;
 	if(IsDlgButtonChecked(hwnd,IDC_RADIO1)==BST_CHECKED) d.units=2;
@@ -3077,9 +3082,10 @@ LRESULT CALLBACK WndProcEditPal(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 			InvalidateRect(hwnd,NULL,TRUE);
 		}
 		else if(p->alphabuttonstate) {
-			struct get_int_ctx st;
-
 			if(p->caneditcolors) {
+				struct get_int_ctx st;
+
+				ZeroMemory(&st, sizeof(struct get_int_ctx));
 				if(c>=p->numtrns) return 0;
 				st.value=(int)p->plte[c].alpha;
 				st.label=_T("Enter alpha (0=transparent, 255=opaque)");
@@ -3368,7 +3374,7 @@ static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		case IDC_SETBKGD:
 			if(code==BN_CLICKED) {
 				if(p->caneditcolors) {
-					p->bkgdbuttonstate= !p->bkgdbuttonstate;
+					p->bkgdbuttonstate= (p->bkgdbuttonstate)?0:1;
 					CheckDlgButton(hwnd,IDC_SETBKGD,p->bkgdbuttonstate?BST_CHECKED:BST_UNCHECKED);
 				}
 				else {
@@ -3383,7 +3389,7 @@ static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hwnd, UINT msg, WPARAM wParam, LPA
 		case IDC_EDITALPHA:
 			if(code==BN_CLICKED) {
 				if(p->caneditcolors) {
-					p->alphabuttonstate= !p->alphabuttonstate;
+					p->alphabuttonstate= (p->alphabuttonstate)?0:1;
 					CheckDlgButton(hwnd,IDC_EDITALPHA,p->alphabuttonstate?BST_CHECKED:BST_UNCHECKED);
 				}
 				else {
@@ -3399,6 +3405,7 @@ static INT_PTR CALLBACK DlgProcEdit_PLTE(HWND hwnd, UINT msg, WPARAM wParam, LPA
 				struct get_int_ctx st;
 				int i;
 
+				ZeroMemory(&st, sizeof(struct get_int_ctx));
 				st.value=255;
 				st.label=_T("Set all alpha (0=transparent, 255=opaque)");
 				st.title=_T("Set alpha for all palette colors");

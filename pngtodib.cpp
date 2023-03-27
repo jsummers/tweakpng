@@ -439,6 +439,9 @@ static int decode_strategy_rgb(P2D *p2d, int binarytrns)
 	png_color_16p trans_color;
 	int num_trans;
 
+	ZeroMemory(&trns_key_color, sizeof(struct p2d_color255_struct));
+	ZeroMemory(&c, sizeof(struct p2d_color255_struct));
+
 	if(binarytrns) {
 		// Read the transparency key color from the PNG file.
 		png_get_tRNS(p2d->png_ptr, p2d->info_ptr, &trans_alpha, &num_trans, &trans_color);
@@ -642,6 +645,8 @@ static int decode_strategy_palette(P2D *p2d)
 	double trns_alpha_1;
 	int k;
 
+	ZeroMemory(&lcolor, sizeof(struct p2d_color_fltpt_struct));
+
 	// Copy the PNG palette to the DIB palette
 	if(p2d->pngf_palette_entries != p2d->dib_palette_entries) return 0;
 
@@ -760,6 +765,7 @@ int p2d_run(P2D *p2d)
 	int has_trns = 0;
 	int k;
 
+	ZeroMemory(&errinfo, sizeof(struct errstruct));
 	retval=PNGD_E_ERROR;
 	p2d->png_ptr=NULL;
 	p2d->info_ptr=NULL;
@@ -838,7 +844,7 @@ int p2d_run(P2D *p2d)
 	png_get_IHDR(p2d->png_ptr, p2d->info_ptr, &p2d->width, &p2d->height, &p2d->pngf_bit_depth, &p2d->color_type,
 		&interlace_type, NULL, NULL);
 
-	p2d->is_grayscale = !(p2d->color_type&PNG_COLOR_MASK_COLOR);
+	p2d->is_grayscale = (p2d->color_type&PNG_COLOR_MASK_COLOR)?0:1;
 
 	has_trns = png_get_valid(p2d->png_ptr,p2d->info_ptr,PNG_INFO_tRNS);
 

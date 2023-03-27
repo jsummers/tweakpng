@@ -195,16 +195,14 @@ void Png::update_row(HWND hwnd,int i)
 	lvi.pszText=chunk[i]->m_chunktype_tchar;
 	rv=ListView_SetItem(hwnd,&lvi);
 
-	lvi.pszText=buf;
-
 	StringCchPrintf(buf,4096,_T("%u"),chunk[i]->length);       // length
+	lvi.pszText=buf;
 	lvi.iSubItem=1;
 	rv=ListView_SetItem(hwnd,&lvi);
 
 	StringCchPrintf(buf,4096,_T("%08x"),chunk[i]->m_crc);          // crc
 	lvi.iSubItem=2;
 	rv=ListView_SetItem(hwnd,&lvi);
-
 
 	chunk[i]->get_text_descr_generic(buf,4096);        // attributes
 	lvi.iSubItem=3;
@@ -800,6 +798,7 @@ int Png::read_next_chunk(HANDLE fh, DWORD *filepos)
 	int r;
 	int i;
 
+	ZeroMemory(fbuf, sizeof(fbuf));
 	// first 4 bytes are the chunk data length,
 	// next 4 bytes are the chunk type
 	r=ReadFile(fh,(LPVOID)fbuf,8,&n,NULL);
@@ -1196,6 +1195,7 @@ static void ReadSettings()
 	r=RegQueryValueEx(key,_T("zoom"),NULL,NULL,(LPBYTE)(&globals.vsize),&datasize);
 
 	datasize=sizeof(DWORD);
+	tmpd = 0;
 	r=RegQueryValueEx(key,_T("bgcolor"),NULL,NULL,(LPBYTE)&tmpd,&datasize);
 	if(r==ERROR_SUCCESS) {
 		globals.custombgcolor = (COLORREF)tmpd;
@@ -1229,7 +1229,13 @@ static void get_filename_from_cmdline(const TCHAR *lpCmdLine)
 	}
 }
 
-int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
+#ifndef _In_
+#define _In_
+#define _In_opt_
+#endif
+
+int WINAPI _tWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPTSTR lpCmdLine, _In_ int nShowCmd)
 {
 	MSG msg;
 	HACCEL hAccTable;
@@ -1362,7 +1368,6 @@ static void SetTitle(Png *p)
 	TCHAR buf[1024];
 	int buf_valid = 0;
 	const TCHAR *basefn = NULL;
-	struct filename_path_struct fnp;
 	int ret;
 
 	if(!p) {
@@ -1371,7 +1376,10 @@ static void SetTitle(Png *p)
 	}
 
 	if(p->m_named) {
+		struct filename_path_struct fnp;
+
 		// TODO: The filename is parsed more often than necessary.
+		ZeroMemory(&fnp, sizeof(struct filename_path_struct));
 		fnp.full_fn = p->m_filename;
 		ret = parse_filename_path(&fnp);
 
@@ -2838,6 +2846,7 @@ static void ContextMenu(HWND hwnd, int x, int y)
 		// Special case; most likely the user pressed the Menu key.
 		POINT tmppt;
 
+		ZeroMemory(&tmppt, sizeof(POINT));
 		tmppt.x = 4;
 		tmppt.y = 4;
 		ClientToScreen(globals.hwndMainList,&tmppt);
