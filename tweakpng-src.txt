@@ -46,8 +46,7 @@ twpng-config.h
 tweakpng.cpp
 tweakpng.h
 tweakpng.rc
-tweakpng.sln     (VC9 workspace file)
-tweakpng.vcproj  (VC9 project file)
+proj/...            (Visual Studio project files)
 viewer.cpp
 
 
