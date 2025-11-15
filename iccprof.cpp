@@ -68,7 +68,7 @@ int ImportICCProfileByFilename(Png *png, const TCHAR *fn)
 		goto done;
 	}
 
-	unc_prof_len=GetFileSize(fh,NULL)-4;
+	unc_prof_len=GetFileSize(fh,NULL);
 	if(unc_prof_len<128 || unc_prof_len>100000000) goto done;
 	unc_prof_data = (unsigned char*)malloc(unc_prof_len);
 	if(!unc_prof_data) goto done;
