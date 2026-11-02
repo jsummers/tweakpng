@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=TweakPNG
+GenericName=PNG Chunk Editor
+Comment=View and edit the low-level structure of PNG, MNG and JNG files
+Exec=tweakpng %f
+Icon=tweakpng
+Terminal=false
+Categories=Graphics;Viewer;Qt;
+MimeType=image/png;image/apng;video/x-mng;image/x-jng;

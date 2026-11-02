@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.snshn.tweakpng</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>TweakPNG</name>
+  <summary>View and edit the low-level structure of PNG files</summary>
+  <description>
+    <p>TweakPNG lists the chunks in a PNG, MNG or JNG file and lets you edit, reorder, insert, delete, import and export them.</p>
+  </description>
+  <launchable type="desktop-id">tweakpng.desktop</launchable>
+  <url type="homepage">https://github.com/snshn/tweakpng</url>
+  <provides><binary>tweakpng</binary></provides>
+</component>
