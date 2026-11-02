@@ -1,0 +1,198 @@
+name: Release
+
+# Pushing a tag such as v1.4.7 builds every package and publishes a GitHub
+# release. Running it by hand builds the packages as workflow artifacts only.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: 6.8.3
+  # macOS 26 removed the AGL framework, which Qt 6.8.3 always links.
+  QT_VERSION_MACOS: 6.11.3
+
+jobs:
+  appimage:
+    name: Linux AppImage
+    # The oldest supported image, since an AppImage runs on systems as new as
+    # or newer than the glibc it was built against.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: linux_gcc_64
+          cache: true
+
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpng-dev zlib1g-dev libgl-dev ninja-build libxcb-cursor0 \
+            libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 \
+            libxcb-xinerama0 libxcb-shape0 libegl1 file
+
+      - name: Build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr -DTWEAKPNG_QT_VERSION=6
+          cmake --build build --parallel
+          ctest --test-dir build --output-on-failure
+          DESTDIR="$PWD/AppDir" cmake --install build
+
+      - name: Package
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: |
+          base=https://github.com/linuxdeploy
+          curl -fsSLO "$base/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
+          curl -fsSLO "$base/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage"
+          chmod +x linuxdeploy-*.AppImage
+          export LD_LIBRARY_PATH="$QT_ROOT_DIR/lib:$LD_LIBRARY_PATH"
+          export QMAKE="$QT_ROOT_DIR/bin/qmake"
+          export LDAI_OUTPUT="TweakPNG-${GITHUB_REF_NAME//\//-}-x86_64.AppImage"
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage \
+            --desktop-file packaging/linux/tweakpng.desktop \
+            --icon-file resources/icons/tweakpng-256.png --icon-filename tweakpng
+          ls -l "$LDAI_OUTPUT"
+
+      - name: Smoke test
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+          QT_QPA_PLATFORM: offscreen
+        run: ./TweakPNG-*.AppImage --version
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-appimage
+          path: TweakPNG-*.AppImage
+          if-no-files-found: error
+
+  macos:
+    name: macOS app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION_MACOS }}
+          arch: clang_64
+          cache: true
+
+      - name: Build a universal binary
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTWEAKPNG_QT_VERSION=6 \
+            -DCMAKE_OSX_ARCHITECTURES='arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
+            -DTWEAKPNG_BUNDLED_PNG=ON
+          cmake --build build --parallel
+          ctest --test-dir build --output-on-failure
+
+      - name: Package
+        run: |
+          name="TweakPNG-${GITHUB_REF_NAME//\//-}-macOS"
+          macdeployqt build/TweakPNG.app
+          # Unsigned apps need at least an ad-hoc signature to run on Apple silicon.
+          codesign --force --deep --sign - build/TweakPNG.app
+          lipo -archs build/TweakPNG.app/Contents/MacOS/TweakPNG | grep -q 'x86_64 arm64\|arm64 x86_64'
+          ditto -c -k --sequesterRsrc --keepParent build/TweakPNG.app "$name.zip"
+          hdiutil create -volname TweakPNG -srcfolder build/TweakPNG.app -ov -format UDZO "$name.dmg"
+
+      - name: Smoke test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: build/TweakPNG.app/Contents/MacOS/TweakPNG --version
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos-app
+          path: |
+            TweakPNG-*.zip
+            TweakPNG-*.dmg
+          if-no-files-found: error
+
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_msvc2022_64
+          cache: true
+
+      - name: Build
+        run: |
+          cmake -S . -B build -DTWEAKPNG_QT_VERSION=6 -DTWEAKPNG_BUNDLED_PNG=ON -DTWEAKPNG_BUNDLED_ZLIB=ON
+          cmake --build build --config Release --parallel
+          ctest --test-dir build -C Release --output-on-failure
+
+      - name: Collect files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item build/Release/tweakpng.exe dist/
+          Copy-Item COPYING.txt dist/
+          windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw dist/tweakpng.exe
+          # The Visual C++ runtime, so that nothing else needs installing.
+          foreach ($dll in 'vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll', 'msvcp140_1.dll', 'msvcp140_2.dll') {
+            Copy-Item "$env:WINDIR/System32/$dll" dist/
+          }
+
+      - name: Smoke test
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          # A GUI program stays running if every DLL it needs was found.
+          $p = Start-Process dist/tweakpng.exe -PassThru
+          Start-Sleep -Seconds 5
+          if ($p.HasExited) { throw "tweakpng.exe exited with code $($p.ExitCode)" }
+          Stop-Process $p
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $name = "TweakPNG-$($env:GITHUB_REF_NAME -replace '/', '-')-windows-x64"
+          Compress-Archive -Path dist/* -DestinationPath "$name-portable.zip"
+          & "${env:ProgramFiles(x86)}/NSIS/makensis.exe" "/DOUTFILE=$PWD\$name-setup.exe" "/DSOURCEDIR=$PWD\dist" packaging/windows/installer.nsi
+          if ($LASTEXITCODE -ne 0) { throw "makensis failed" }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-installer
+          path: |
+            TweakPNG-*-setup.exe
+            TweakPNG-*-portable.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [appimage, macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create checksums
+        working-directory: artifacts
+        run: sha256sum * > SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: artifacts/*
+          generate_release_notes: true

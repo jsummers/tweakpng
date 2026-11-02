@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux Qt 6
+            os: ubuntu-24.04
+            qt_major: 6
+            apt: qt6-base-dev libgl-dev libpng-dev zlib1g-dev ninja-build
+          - name: Linux Qt 5
+            os: ubuntu-24.04
+            qt_major: 5
+            apt: qtbase5-dev libpng-dev zlib1g-dev ninja-build
+          # macOS 26 removed the AGL framework, which Qt 6.8.3 always links.
+          - name: macOS Qt 6
+            os: macos-latest
+            qt_major: 6
+            qt_version: 6.11.3
+            qt_arch: clang_64
+            cmake_args: -DTWEAKPNG_BUNDLED_PNG=ON
+          # Qt 5.15 has no arm64 macOS build, so it needs an Intel runner.
+          - name: macOS Qt 5
+            os: macos-15-intel
+            qt_major: 5
+            qt_version: 5.15.2
+            qt_arch: clang_64
+            cmake_args: -DTWEAKPNG_BUNDLED_PNG=ON
+          # Both libraries are built from source on Windows, so that CMake can't
+          # pick up an unrelated copy that happens to be on the runner.
+          - name: Windows Qt 6
+            os: windows-latest
+            qt_major: 6
+            qt_version: 6.8.3
+            qt_arch: win64_msvc2022_64
+            cmake_args: -DTWEAKPNG_BUNDLED_PNG=ON -DTWEAKPNG_BUNDLED_ZLIB=ON
+          - name: Windows Qt 5
+            os: windows-2022
+            qt_major: 5
+            qt_version: 5.15.2
+            qt_arch: win64_msvc2019_64
+            cmake_args: -DTWEAKPNG_BUNDLED_PNG=ON -DTWEAKPNG_BUNDLED_ZLIB=ON
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install packages
+        if: matrix.apt
+        run: sudo apt-get update && sudo apt-get install -y ${{ matrix.apt }}
+
+      - name: Install Qt
+        if: matrix.qt_version
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DTWEAKPNG_QT_VERSION=${{ matrix.qt_major }} ${{ matrix.cmake_args }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  sanitizers:
+    name: Linux ASan and UBSan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev libgl-dev libpng-dev zlib1g-dev ninja-build
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer"
+          -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        # Qt itself leaks small one-time allocations at exit.
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+        run: ctest --test-dir build --output-on-failure
+
+  preference:
+    name: Qt 6 is preferred over Qt 5
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install both Qt versions
+        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qtbase5-dev libgl-dev libpng-dev zlib1g-dev
+
+      - name: Configure with no version forced
+        run: |
+          set -o pipefail
+          cmake -S . -B build -DTWEAKPNG_BUILD_TESTS=OFF | tee configure.log
+
+      - name: Check the choice
+        run: grep -q 'Building against Qt 6' configure.log

@@ -1,0 +1,7 @@
+<RCC>
+	<qresource prefix="/">
+		<file alias="tweakpng.png">icons/tweakpng-256.png</file>
+		<file alias="viewer.png">icons/viewer-256.png</file>
+		<file>tweakpng.txt</file>
+	</qresource>
+</RCC>
